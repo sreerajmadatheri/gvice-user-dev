@@ -1,0 +1,129 @@
+.article-page {
+  padding-bottom: 4rem;
+}
+
+.article-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding-top: 3rem;
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+  margin-bottom: 2rem;
+  transition: color var(--transition-fast);
+}
+
+.back-link:hover {
+  color: var(--text-accent);
+}
+
+.article-header {
+  text-align: center;
+  margin-bottom: 2.5rem;
+}
+
+.article-category {
+  display: inline-block;
+  color: var(--text-accent);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+.article-title {
+  font-family: var(--font-display);
+  font-size: 3rem;
+  line-height: 1.2;
+  margin-bottom: 1.5rem;
+  color: var(--text-primary);
+}
+
+.article-meta {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.article-meta span:first-child::after {
+  content: '|';
+  margin: 0 0.75rem;
+  color: var(--border-color);
+}
+
+.article-featured-image {
+  border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 3rem;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+}
+
+.article-featured-image img {
+  width: 100%;
+  height: auto;
+  display: block;
+  max-height: 500px;
+  object-fit: cover;
+}
+
+.article-content {
+  font-size: 1.15rem;
+  line-height: 1.8;
+  color: #333;
+  position: relative;
+}
+
+.article-lead {
+  font-weight: 600;
+  font-size: 1.3rem;
+  margin-bottom: 2rem;
+  color: var(--text-primary);
+}
+
+.article-sample p {
+  margin-bottom: 1.5rem;
+}
+
+/* Paywall Fade Effect */
+.paywall-overlay {
+  position: relative;
+  margin-top: -2rem;
+  padding-top: 8rem;
+  background: linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,1) 70%);
+  text-align: center;
+  padding-bottom: 2rem;
+}
+
+.paywall-message {
+  background: #fdfdfd;
+  border: 1px solid var(--border-color);
+  padding: 3rem 2rem;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.paywall-message h3 {
+  font-family: var(--font-display);
+  font-size: 1.8rem;
+  color: var(--text-primary);
+  margin-bottom: 1rem;
+}
+
+.paywall-message p {
+  color: var(--text-secondary);
+  font-size: 1.05rem;
+}
+
+@media (max-width: 768px) {
+  .article-title {
+    font-size: 2.2rem;
+  }
+}

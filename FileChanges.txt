@@ -1,0 +1,40 @@
+FileChanges
+Add - 100 %
+src/lib/firebase.js
+src/lib/cloudinary.js
+firebase.json
+firestore.rules
+.env
+package.json
+src/pages/SeedData.jsx
+src/pages/admin/AdminDashboard.jsx
+src/pages/Projects.jsx
+src/pages/admin/ManageProjects.jsx
+src/pages/admin/AdminLayout.jsx
+src/pages/admin/ManageProjects.jsx
+src/App.jsx
+src/context/AuthContext.jsx
+src/pages/Auction.jsx
+src/pages/services/userService.js
+src/pages/Auction.jsx
+src/lib/formspree.js
+
+src/pages/admin/AdminDashboard.jsx
+src/pages/admin/AdminDashboard.jsx
+src/pages/admin/AdminDashboard.jsx
+src/pages/admin/AdminDashboard.jsx
+
+
+
+Delete
+
+https://formspree.io/f/mqerngga
+
+Pending
+
+🔄 Migrate News to Firestore + Cloudinary
+🔄 Migrate Tenders
+🔄 Migrate Equipment
+🔄 Complete the Admin Panel (CRUD for all collections)
+🔄 Build the Profile page (edit name, company, profile photo, etc.)
+🚀 Final testing and production deployment
