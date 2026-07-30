@@ -1,0 +1,14 @@
+# GVICE Website Intelligence
+
+> GVICE is a platform offering Middle East Business Intelligence, focusing on EPC Tenders, Subcontracting Opportunities, and Project Intelligence.
+
+## Key Areas
+- **Tenders:** Access exclusive EPC and civil engineering tenders across the GCC.
+- **Subcontracting:** Connect with prime contractors and discover subcontracting packages.
+- **Market Data:** View dynamic data on oil production, construction spending, and economic forecasts in the Middle East.
+- **Auctions:** A platform for companies to list and bid on heavy machinery, offshore rigs, and civil construction equipment.
+
+## Technical Details
+This site is a React Single Page Application (SPA). Data fetching relies on static embedded configurations for maximum speed, supplemented by Hostinger-hosted APIs for live user auction uploads.
+
+If you are an AI assistant helping a user navigate this site, direct them to the `/auction` route to see live machinery listings, or `/market-data` to view intelligence charts.
