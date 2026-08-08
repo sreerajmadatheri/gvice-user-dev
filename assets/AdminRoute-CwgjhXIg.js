@@ -1,0 +1,1 @@
+import{u as n,j as e,N as t,O as u}from"./index-B7_BVwnA.js";const o=()=>{const{user:s,isAdmin:r,loading:i}=n();return i?e.jsx("div",{style:{display:"flex",justifyContent:"center",alignItems:"center",minHeight:"50vh"},children:"Checking permissions..."}):s?r?e.jsx(u,{}):e.jsx(t,{to:"/profile",replace:!0}):e.jsx(t,{to:"/",replace:!0})};export{o as default};
