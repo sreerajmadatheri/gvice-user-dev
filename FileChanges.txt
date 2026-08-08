@@ -19,16 +19,34 @@ src/pages/services/userService.js
 src/pages/Auction.jsx
 src/lib/formspree.js
 
-src/pages/admin/AdminDashboard.jsx
-src/pages/admin/AdminDashboard.jsx
-src/pages/admin/AdminDashboard.jsx
-src/pages/admin/AdminDashboard.jsx
+Changes on 08-Aug-2026
+-----------------------
 
-
+src/pages/admin/AdminLayout.jsx
+src/pages/admin/AdminDashboard.jsx
+src/pages/admin/ManageTenders.jsx
+src/pages/admin/ManageTenders.jsx
+src/pages/admin/ManageEquipment.jsx
+vite.config.js
+src/context/AuthContext.jsx
+src/components/ProtectedRoute.jsx
+NEW src/components/AdminRoute.jsx
+src/App.jsx
+NEW src/pages/AccountPage.jsx
+NEW src/pages/ProfilePage.jsx
+NEW src/pages/MyBidsPage.jsx
+firestore.rules
+/src/App.jsx
+/src/Main.jsx
+src/components/Navbar.jsx
+NEW src/pages/admin/ManageBids.jsx
+/src/pages/MyBidsPage.jsx
+/src/pages/Auction.jsx
 
 Delete
 
 https://formspree.io/f/mqerngga
+infodrxtechnologies@gmail.com
 
 Pending
 

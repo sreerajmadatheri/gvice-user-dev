@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import {
   Upload,
-  X
+  X,
 } from "lucide-react";
 
 import {
@@ -37,7 +37,7 @@ const mockEquipmentListings = [
     specs: [
       { label: "Height", val: "120m" },
       { label: "Condition", val: "New" },
-      { label: "Location", val: "Jubail, KSA" }
+      { label: "Location", val: "Jubail, KSA" },
     ],
     price: "$850,000",
     featured: true,
@@ -51,7 +51,7 @@ const mockEquipmentListings = [
     specs: [
       { label: "Pressure", val: "10,000 PSI" },
       { label: "Condition", val: "Refurbished" },
-      { label: "Location", val: "Dhahran" }
+      { label: "Location", val: "Dhahran" },
     ],
     price: "$320,000",
     featured: true,
@@ -65,7 +65,7 @@ const mockEquipmentListings = [
     specs: [
       { label: "Capacity", val: "120 m³/h" },
       { label: "Year", val: "2023" },
-      { label: "Location", val: "Riyadh" }
+      { label: "Location", val: "Riyadh" },
     ],
     price: "$415,000",
     featured: false,
@@ -79,7 +79,7 @@ const mockEquipmentListings = [
     specs: [
       { label: "Type", val: "Automated" },
       { label: "Condition", val: "Excellent" },
-      { label: "Location", val: "Dubai" }
+      { label: "Location", val: "Dubai" },
     ],
     price: "$1,200,000",
     featured: true,
@@ -93,16 +93,15 @@ const mockEquipmentListings = [
     specs: [
       { label: "Capacity", val: "50 MW" },
       { label: "Material", val: "SS" },
-      { label: "Location", val: "Al Khobar" }
+      { label: "Location", val: "Al Khobar" },
     ],
     price: "$210,000",
     featured: false,
     img: "/Products/Steam Exchanger.png",
-  }
+  },
 ];
 
 const Auction = () => {
-
   const { user } = useAuth();
 
   const [equipmentListings, setEquipmentListings] =
@@ -132,33 +131,39 @@ const Auction = () => {
     price: "",
     location: "",
     condition: "Used",
-    description: ""
+    description: "",
   });
 
-  const [showBidModal, setShowBidModal] = useState(false);
+  const [showBidModal, setShowBidModal] =
+      useState(false);
 
-  const [selectedEquipment, setSelectedEquipment] = useState(null);
+  const [selectedEquipment, setSelectedEquipment] =
+      useState(null);
 
-  const [bidAmount, setBidAmount] = useState("");
+  const [bidAmount, setBidAmount] =
+      useState("");
 
-  const [existingBid, setExistingBid] = useState(null);
+  const [existingBid, setExistingBid] =
+      useState(null);
 
-  const [savingBid, setSavingBid] = useState(false);
+  const [savingBid, setSavingBid] =
+      useState(false);
 
-  const [myBids, setMyBids] = useState({});
+  const [myBids, setMyBids] =
+      useState({});
 
   useEffect(() => {
     fetchEquipment();
 
     if (user) {
       fetchMyBids();
+    } else {
+      setMyBids({});
     }
   }, [user]);
 
   async function fetchEquipment() {
-
     try {
-
       const q = query(
           collection(db, "equipmentListings"),
           orderBy("createdAt", "desc")
@@ -167,27 +172,20 @@ const Auction = () => {
       const snapshot = await getDocs(q);
 
       if (snapshot.empty) {
-
         setEquipmentListings(mockEquipmentListings);
         return;
-
       }
 
-      const data = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
+      const data = snapshot.docs.map((equipmentDoc) => ({
+        id: equipmentDoc.id,
+        ...equipmentDoc.data(),
       }));
 
       setEquipmentListings(data);
-
     } catch (err) {
-
       console.error(err);
-
       setEquipmentListings(mockEquipmentListings);
-
     }
-
   }
 
   const handleImageChange = (e) => {
@@ -197,7 +195,6 @@ const Auction = () => {
 
     setImageFile(file);
 
-    // Fixes the preview issue
     const reader = new FileReader();
 
     reader.onloadend = () => {
@@ -218,7 +215,9 @@ const Auction = () => {
     if (!window.confirm("Delete this listing?")) return;
 
     try {
-      await deleteDoc(doc(db, "equipmentListings", id));
+      await deleteDoc(
+          doc(db, "equipmentListings", id)
+      );
 
       setEquipmentListings((prev) =>
           prev.filter((item) => item.id !== id)
@@ -232,30 +231,31 @@ const Auction = () => {
   };
 
   const openBidModal = (equipment) => {
-
     setSelectedEquipment(equipment);
 
     const existing = myBids[equipment.id];
 
     if (existing) {
-
       setExistingBid(existing);
-
       setBidAmount(existing.bidAmount.toString());
-
     } else {
-
       setExistingBid(null);
-
       setBidAmount("");
-
     }
 
     setShowBidModal(true);
-
   };
 
   const submitBid = async () => {
+    if (!user) {
+      alert("Please login before placing a bid.");
+      return;
+    }
+
+    if (!selectedEquipment) {
+      alert("Please select an equipment listing.");
+      return;
+    }
 
     if (!bidAmount || Number(bidAmount) <= 0) {
       alert("Please enter a valid bid amount.");
@@ -265,9 +265,10 @@ const Auction = () => {
     setSavingBid(true);
 
     try {
+      const sellerUserId =
+          selectedEquipment.userId || "";
 
       const bidData = {
-
         auctionId: selectedEquipment.id,
 
         equipmentName: selectedEquipment.name,
@@ -276,43 +277,41 @@ const Auction = () => {
 
         sellerCompany: selectedEquipment.company,
 
+        sellerUserId: sellerUserId,
+
         sector: selectedEquipment.sector,
 
         bidderUserId: user.uid,
 
         bidderName: user.displayName || "",
 
-        bidderEmail: user.email,
+        bidderEmail: user.email || "",
 
         bidderPhoto: user.photoURL || "",
 
         bidAmount: Number(bidAmount),
 
-        status: "Pending",
+        status: existingBid?.status || "Pending",
 
         updatedAt: serverTimestamp(),
-
       };
 
-      //-----------------------------------
-      // Update Existing Bid
-      //-----------------------------------
+      /* -----------------------------------
+         Update Existing Bid
+      ----------------------------------- */
 
       if (existingBid) {
-
         await updateDoc(
             doc(db, "auctionBids", existingBid.id),
             bidData
         );
-
       }
 
-          //-----------------------------------
-          // New Bid
-      //-----------------------------------
+      /* -----------------------------------
+         New Bid
+      ----------------------------------- */
 
       else {
-
         await addDoc(
             collection(db, "auctionBids"),
             {
@@ -320,17 +319,15 @@ const Auction = () => {
               createdAt: serverTimestamp(),
             }
         );
-
       }
 
-      //-----------------------------------
-      // Refresh My Bids
-      //-----------------------------------
+      /* -----------------------------------
+         Refresh My Bids
+      ----------------------------------- */
 
       await fetchMyBids();
 
       await sendBidNotification({
-
         auctionId: selectedEquipment.id,
 
         equipmentName: selectedEquipment.name,
@@ -341,21 +338,20 @@ const Auction = () => {
 
         bidAmount: Number(bidAmount),
 
-        bidderName: user.displayName,
+        bidderName: user.displayName || "",
 
-        bidderEmail: user.email,
+        bidderEmail: user.email || "",
 
         bidderUserId: user.uid,
 
-        bidderPhoto: user.photoURL,
+        bidderPhoto: user.photoURL || "",
 
-        status: "Pending",
-
+        status: existingBid?.status || "Pending",
       });
 
-      //-----------------------------------
-      // Close Popup
-      //-----------------------------------
+      /* -----------------------------------
+         Close Popup
+      ----------------------------------- */
 
       setShowBidModal(false);
 
@@ -365,28 +361,23 @@ const Auction = () => {
 
       setBidAmount("");
 
-      alert("Bid submitted successfully.");
-
+      alert(
+          existingBid
+              ? "Bid updated successfully."
+              : "Bid submitted successfully."
+      );
     } catch (err) {
-
       console.error(err);
-
       alert(err.message);
-
     } finally {
-
       setSavingBid(false);
-
     }
-
   };
 
   const fetchMyBids = async () => {
-
     if (!user) return;
 
     try {
-
       const q = query(
           collection(db, "auctionBids"),
           where("bidderUserId", "==", user.uid)
@@ -396,25 +387,19 @@ const Auction = () => {
 
       const bids = {};
 
-      snap.forEach(doc => {
-
-        const data = doc.data();
+      snap.forEach((bidDoc) => {
+        const data = bidDoc.data();
 
         bids[data.auctionId] = {
-          id: doc.id,
-          ...data
+          id: bidDoc.id,
+          ...data,
         };
-
       });
 
       setMyBids(bids);
-
     } catch (err) {
-
       console.error(err);
-
     }
-
   };
 
   const handleUploadSubmit = async (e) => {
@@ -425,29 +410,34 @@ const Auction = () => {
       return;
     }
 
+    if (!user) {
+      setError("Please login before posting equipment.");
+      return;
+    }
+
     setUploading(true);
     setError("");
 
     try {
+      /* ----------------------------------------
+         Upload image to Cloudinary
+      ---------------------------------------- */
 
-      //----------------------------------------
-      // Upload image to Cloudinary
-      //----------------------------------------
+      const imageUrl =
+          await uploadToCloudinary(imageFile);
 
-      const imageUrl = await uploadToCloudinary(imageFile);
-
-      //----------------------------------------
-      // Firestore document
-      //----------------------------------------
+      /* ----------------------------------------
+         Firestore document
+      ---------------------------------------- */
 
       const listing = {
         company:
             user?.displayName ||
             "GVICE Registered Contractor",
 
-        userEmail: user?.email,
+        userEmail: user?.email || "",
 
-        userId: user?.uid,
+        userId: user?.uid || "",
 
         name: formData.name,
 
@@ -475,18 +465,18 @@ const Auction = () => {
         createdAt: serverTimestamp(),
       };
 
-      //----------------------------------------
-      // Save to Firestore
-      //----------------------------------------
+      /* ----------------------------------------
+         Save to Firestore
+      ---------------------------------------- */
 
       await addDoc(
           collection(db, "equipmentListings"),
           listing
       );
 
-      //----------------------------------------
-      // Reset form
-      //----------------------------------------
+      /* ----------------------------------------
+         Reset form
+      ---------------------------------------- */
 
       setFormData({
         name: "",
@@ -498,6 +488,7 @@ const Auction = () => {
       });
 
       setImageFile(null);
+
       setImagePreview("");
 
       setIsModalOpen(false);
@@ -505,21 +496,20 @@ const Auction = () => {
       alert("Equipment uploaded successfully.");
 
       fetchEquipment();
-
     } catch (err) {
-
       console.error(err);
-
       setError(err.message);
-
     } finally {
-
       setUploading(false);
-
     }
   };
 
-  const filters = ["all", "oil", "civil", "marine"];
+  const filters = [
+    "all",
+    "oil",
+    "civil",
+    "marine",
+  ];
 
   const filteredListings =
       activeFilter === "all"
@@ -544,12 +534,14 @@ const Auction = () => {
             </div>
 
             <h1 className="auction-hero-title">
-              GVICE Equipment <span className="accent">Auction</span>
+              GVICE Equipment{" "}
+              <span className="accent">Auction</span>
             </h1>
 
             <p className="auction-hero-sub">
-              Buy and sell industrial equipment across the Middle East.
-              Upload your machinery and reach verified buyers instantly.
+              Buy and sell industrial equipment across
+              the Middle East. Upload your machinery and
+              reach verified buyers instantly.
             </p>
 
             <div className="auction-hero-ctas">
@@ -721,7 +713,9 @@ const Auction = () => {
 
                         <button
                             className="enquire-btn"
-                            onClick={() => openBidModal(item)}
+                            onClick={() =>
+                                openBidModal(item)
+                            }
                         >
                           {myBids[item.id]
                               ? "✓ Bid Submitted"
@@ -742,29 +736,33 @@ const Auction = () => {
 
         </section>
 
-
-
         {/* ---------------- UPLOAD MODAL ---------------- */}
 
         {isModalOpen && (
+
             <div className="upload-modal-overlay">
 
               <div className="upload-modal glass-panel">
 
                 <button
                     className="close-btn"
-                    onClick={() => setIsModalOpen(false)}
+                    onClick={() =>
+                        setIsModalOpen(false)
+                    }
                 >
                   <X size={20} />
                 </button>
 
                 <div className="modal-header">
 
-                  <h2>Post Equipment for Auction</h2>
+                  <h2>
+                    Post Equipment for Auction
+                  </h2>
 
                   <p>
-                    Upload your equipment and make it visible to
-                    verified contractors across the Middle East.
+                    Upload your equipment and make it
+                    visible to verified contractors across
+                    the Middle East.
                   </p>
 
                 </div>
@@ -823,7 +821,9 @@ const Auction = () => {
 
                   <div className="form-group">
 
-                    <label>Equipment Name</label>
+                    <label>
+                      Equipment Name
+                    </label>
 
                     <input
                         required
@@ -839,7 +839,9 @@ const Auction = () => {
 
                     <div className="form-group">
 
-                      <label>Sector</label>
+                      <label>
+                        Sector
+                      </label>
 
                       <select
                           name="sector"
@@ -864,7 +866,9 @@ const Auction = () => {
 
                     <div className="form-group">
 
-                      <label>Price</label>
+                      <label>
+                        Price
+                      </label>
 
                       <input
                           required
@@ -882,7 +886,9 @@ const Auction = () => {
 
                     <div className="form-group">
 
-                      <label>Location</label>
+                      <label>
+                        Location
+                      </label>
 
                       <input
                           required
@@ -896,7 +902,9 @@ const Auction = () => {
 
                     <div className="form-group">
 
-                      <label>Condition</label>
+                      <label>
+                        Condition
+                      </label>
 
                       <select
                           name="condition"
@@ -923,7 +931,9 @@ const Auction = () => {
 
                   <div className="form-group">
 
-                    <label>Description</label>
+                    <label>
+                      Description
+                    </label>
 
                     <textarea
                         rows={5}
@@ -940,11 +950,9 @@ const Auction = () => {
                       className="submit-listing-btn"
                       disabled={uploading}
                   >
-
                     {uploading
                         ? "Uploading..."
                         : "Post Listing"}
-
                   </button>
 
                 </form>
@@ -952,7 +960,10 @@ const Auction = () => {
               </div>
 
             </div>
+
         )}
+
+        {/* ---------------- BID MODAL ---------------- */}
 
         {showBidModal && (
 
@@ -962,55 +973,50 @@ const Auction = () => {
 
                 <button
                     className="close-btn"
-                    onClick={() => setShowBidModal(false)}
+                    onClick={() =>
+                        setShowBidModal(false)
+                    }
                 >
-                  <X size={20}/>
+                  <X size={20} />
                 </button>
 
-                <h2>{selectedEquipment?.name}</h2>
+                <h2>
+                  {selectedEquipment?.name}
+                </h2>
 
-                <p style={{marginBottom:20}}>
+                <p style={{ marginBottom: 20 }}>
                   Enter your bid amount
                 </p>
 
                 <input
-
                     type="number"
-
                     value={bidAmount}
-
-                    onChange={(e)=>setBidAmount(e.target.value)}
-
+                    onChange={(e) =>
+                        setBidAmount(e.target.value)
+                    }
                     placeholder="Enter amount"
-
                     style={{
-                      width:"100%",
-                      padding:"12px",
-                      marginBottom:"20px"
+                      width: "100%",
+                      padding: "12px",
+                      marginBottom: "20px",
                     }}
-
                 />
 
                 <button
-
                     className="submit-listing-btn"
-
                     onClick={submitBid}
-
                     disabled={
                         savingBid ||
                         (existingBid &&
-                            Number(existingBid.bidAmount) === Number(bidAmount))
+                            Number(existingBid.bidAmount) ===
+                            Number(bidAmount))
                     }
-
                 >
-
                   {savingBid
                       ? "Saving..."
                       : existingBid
                           ? "Update Bid"
                           : "Submit Bid"}
-
                 </button>
 
               </div>

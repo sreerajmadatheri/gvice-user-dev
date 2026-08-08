@@ -1,0 +1,292 @@
+{
+  "generatedAt": "2026-08-08T12:56:57.279Z",
+  "projectId": "gvice-user-dev",
+  "collections": {
+    "admins": {
+      "documentCount": 2,
+      "fields": {
+        "role": {
+          "type": "string"
+        }
+      }
+    },
+    "auctionBids": {
+      "documentCount": 5,
+      "fields": {
+        "auctionId": {
+          "type": "string"
+        },
+        "equipmentName": {
+          "type": "string"
+        },
+        "equipmentImage": {
+          "type": "string"
+        },
+        "sellerCompany": {
+          "type": "string"
+        },
+        "sector": {
+          "type": "string"
+        },
+        "bidderUserId": {
+          "type": "string"
+        },
+        "bidderName": {
+          "type": "string"
+        },
+        "bidderEmail": {
+          "type": "string"
+        },
+        "bidderPhoto": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "timestamp"
+        },
+        "bidAmount": {
+          "type": "number"
+        },
+        "updatedAt": {
+          "type": "timestamp"
+        }
+      }
+    },
+    "equipmentListings": {
+      "documentCount": 29,
+      "fields": {
+        "id": {
+          "type": "multiple:number|string"
+        },
+        "company": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "sector": {
+          "type": "string"
+        },
+        "specs": {
+          "type": "array<map>"
+        },
+        "price": {
+          "type": "string"
+        },
+        "featured": {
+          "type": "boolean"
+        },
+        "img": {
+          "type": "string"
+        },
+        "userEmail": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "number"
+        }
+      }
+    },
+    "news": {
+      "documentCount": 332,
+      "fields": {
+        "id": {
+          "type": "multiple:number|string"
+        },
+        "category": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "author": {
+          "type": "string"
+        },
+        "date": {
+          "type": "string"
+        },
+        "image": {
+          "type": "string"
+        },
+        "excerpt": {
+          "type": "string"
+        },
+        "body": {
+          "type": "string"
+        },
+        "featured": {
+          "type": "boolean"
+        }
+      }
+    },
+    "products": {
+      "documentCount": 1,
+      "fields": {
+        "condition": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "endTime": {
+          "type": "timestamp"
+        },
+        "startTime": {
+          "type": "timestamp"
+        },
+        "sellerPhotoURL": {
+          "type": "string"
+        },
+        "category": {
+          "type": "string"
+        },
+        "sellerId": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "sellerName": {
+          "type": "string"
+        },
+        "bidIncrement": {
+          "type": "number"
+        },
+        "startingPrice": {
+          "type": "number"
+        },
+        "status": {
+          "type": "string"
+        },
+        "imageUrls": {
+          "type": "array<string>"
+        },
+        "imagePaths": {
+          "type": "array<empty>"
+        },
+        "createdAt": {
+          "type": "timestamp"
+        },
+        "updatedAt": {
+          "type": "timestamp"
+        }
+      }
+    },
+    "projects": {
+      "documentCount": 15,
+      "fields": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "sector": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "budget": {
+          "type": "string"
+        }
+      }
+    },
+    "tenders": {
+      "documentCount": 63,
+      "fields": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "client": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        },
+        "deadline": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        }
+      }
+    },
+    "users": {
+      "documentCount": 10,
+      "fields": {
+        "uid": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "displayName": {
+          "type": "string"
+        },
+        "firstName": {
+          "type": "string"
+        },
+        "lastName": {
+          "type": "string"
+        },
+        "company": {
+          "type": "string"
+        },
+        "designation": {
+          "type": "string"
+        },
+        "phone": {
+          "type": "string"
+        },
+        "country": {
+          "type": "string"
+        },
+        "city": {
+          "type": "string"
+        },
+        "profileImage": {
+          "type": "string"
+        },
+        "role": {
+          "type": "string"
+        },
+        "isApproved": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "multiple:number|timestamp"
+        },
+        "updatedAt": {
+          "type": "timestamp"
+        },
+        "photoURL": {
+          "type": "string"
+        },
+        "bio": {
+          "type": "string"
+        },
+        "location": {
+          "type": "string"
+        },
+        "isAdmin": {
+          "type": "boolean"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

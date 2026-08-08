@@ -13,75 +13,140 @@ const Projects = lazy(() => import("./pages/Projects"));
 const Article = lazy(() => import("./pages/Article"));
 const SeedData = lazy(() => import("./pages/SeedData"));
 
-// Admin
+// Authentication
 const ProtectedRoute = lazy(() => import("./components/ProtectedRoute"));
+const AdminRoute = lazy(() => import("./components/AdminRoute"));
+
+// Account Pages
+const AccountPage = lazy(() => import("./pages/AccountPage"));
+const ProfilePage = lazy(() => import("./pages/ProfilePage"));
+const MyBidsPage = lazy(() => import("./pages/MyBidsPage"));
+
+// Admin
 const AdminLayout = lazy(() => import("./pages/admin/AdminLayout"));
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 const ManageNews = lazy(() => import("./pages/admin/ManageNews"));
 const ManageTenders = lazy(() => import("./pages/admin/ManageTenders"));
 const ManageEquipment = lazy(() => import("./pages/admin/ManageEquipment"));
+const ManageProjects = lazy(() => import("./pages/admin/ManageProjects"));
+const ManageBids = lazy(() => import("./pages/admin/ManageBids"));
 
 function App() {
-  return (
-      <div className="app-wrapper">
-        <Navbar />
+    return (
+        <div>
+            <Navbar />
 
-        <main className="main-content">
-          <Suspense
-              fallback={
-                <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "center",
-                      alignItems: "center",
-                      height: "100vh",
-                      color: "#888",
-                    }}
+            <main className="main-content">
+                <Suspense
+                    fallback={
+                        <div
+                            style={{
+                                display: "flex",
+                                justifyContent: "center",
+                                alignItems: "center",
+                                height: "100vh",
+                                color: "#888",
+                            }}
+                        >
+                            Loading...
+                        </div>
+                    }
                 >
-                  Loading...
-                </div>
-              }
-          >
-            <Routes>
-              {/* Public Routes */}
-              <Route path="/" element={<Home />} />
-              <Route
-                  path="/auction"
-                  element={
-                    <ProtectedRoute>
-                      <Auction />
-                    </ProtectedRoute>
-                  }
-              />
-              <Route path="/news" element={<NewsRoom />} />
-              <Route path="/tenders" element={<Tenders />} />
-              <Route path="/projects" element={<Projects />} />
-              <Route path="/article/:id" element={<Article />} />
-              <Route path="/seed" element={<SeedData />} />
+                    <Routes>
+                        {/* Public Routes */}
 
-              {/* Admin Routes */}
-              <Route
-                  path="/admin"
-                  element={
-                    <ProtectedRoute>
-                      <AdminLayout />
-                    </ProtectedRoute>
-                  }
-              >
-                <Route index element={<AdminDashboard />} />
-                <Route path="news" element={<ManageNews />} />
-                <Route path="tenders" element={<ManageTenders />} />
-                <Route path="equipment" element={<ManageEquipment />} />
-              </Route>
+                        <Route path="/" element={<Home />} />
 
-              <Route path="*" element={<Home />} />
-            </Routes>
-          </Suspense>
-        </main>
+                        <Route
+                            path="/auction"
+                            element={
+                                <ProtectedRoute>
+                                    <Auction />
+                                </ProtectedRoute>
+                            }
+                        />
 
-        <Footer />
-      </div>
-  );
+                        <Route path="/news" element={<NewsRoom />} />
+
+                        <Route path="/tenders" element={<Tenders />} />
+
+                        <Route path="/projects" element={<Projects />} />
+
+                        <Route path="/article/:id" element={<Article />} />
+
+                        <Route path="/seed" element={<SeedData />} />
+
+                        {/* User Account */}
+
+                        <Route
+                            path="/profile"
+                            element={
+                                <ProtectedRoute>
+                                    <AccountPage />
+                                </ProtectedRoute>
+                            }
+                        >
+                            <Route index element={<ProfilePage />} />
+
+                            <Route
+                                path="bids"
+                                element={<MyBidsPage />}
+                            />
+
+                            {/* Admin Area */}
+
+                            <Route element={<AdminRoute />}>
+                                <Route
+                                    path="admin"
+                                    element={<AdminLayout />}
+                                >
+                                    <Route
+                                        index
+                                        element={<AdminDashboard />}
+                                    />
+
+                                    <Route
+                                        path="news"
+                                        element={<ManageNews />}
+                                    />
+
+                                    <Route
+                                        path="tenders"
+                                        element={<ManageTenders />}
+                                    />
+
+                                    <Route
+                                        path="equipment"
+                                        element={<ManageEquipment />}
+                                    />
+
+                                    <Route
+                                        path="projects"
+                                        element={<ManageProjects />}
+                                    />
+
+                                    <Route
+                                        path="bids"
+                                        element={<ManageBids />}
+                                    />
+
+                                </Route>
+                            </Route>
+                        </Route>
+
+                        {/* Fallback */}
+
+                        <Route
+                            path="*"
+                            element={<Home />}
+                        />
+                    </Routes>
+                </Suspense>
+            </main>
+
+            <Footer />
+        </div>
+    );
 }
 
 export default App;

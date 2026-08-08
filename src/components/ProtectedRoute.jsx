@@ -1,14 +1,23 @@
-
-import { useAuth } from '../context/AuthContext';
 import { Navigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 const ProtectedRoute = ({ children }) => {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
 
-  // For MVP, we simply require the user to be logged in.
-  // To restrict to specific admins, you can check user.email against an allowed list:
-  // const adminEmails = ['admin@gvice.com'];
-  // if (!user || !adminEmails.includes(user.email)) return <Navigate to="/" />;
+  if (loading) {
+    return (
+        <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              minHeight: "50vh",
+            }}
+        >
+          Loading...
+        </div>
+    );
+  }
 
   if (!user) {
     return <Navigate to="/" replace />;
@@ -18,4 +27,3 @@ const ProtectedRoute = ({ children }) => {
 };
 
 export default ProtectedRoute;
-
