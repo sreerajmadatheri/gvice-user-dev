@@ -43,6 +43,16 @@ NEW src/pages/admin/ManageBids.jsx
 /src/pages/MyBidsPage.jsx
 /src/pages/Auction.jsx
 
+
+Changes on 09-Aug-2026
+-----------------------
+src/pages/AccountPage.jsx
+src/pages/Auction.jsx
+NEW src/pages/ReceivedBidsPage.jsx
+src/App.jsx
+src/pages/admin/Admin.css
+src/pages/MyBidsPage.jsx
+
 Delete
 
 https://formspree.io/f/mqerngga

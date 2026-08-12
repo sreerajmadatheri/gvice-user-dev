@@ -1,9 +1,5 @@
 import { useState, useEffect } from "react";
-import {
-  Upload,
-  X,
-} from "lucide-react";
-
+import { Upload, X } from "lucide-react";
 import {
   collection,
   getDocs,
@@ -23,10 +19,6 @@ import { useAuth } from "../context/AuthContext";
 import { sendBidNotification } from "../lib/formspree";
 
 import "./Auction.css";
-
-/* -------------------------------------------------------
-   MOCK DATA
-------------------------------------------------------- */
 
 const mockEquipmentListings = [
   {
@@ -104,26 +96,16 @@ const mockEquipmentListings = [
 const Auction = () => {
   const { user } = useAuth();
 
-  const [equipmentListings, setEquipmentListings] =
-      useState(mockEquipmentListings);
+  const [equipmentListings, setEquipmentListings] = useState(
+      mockEquipmentListings
+  );
 
-  const [activeFilter, setActiveFilter] =
-      useState("all");
-
-  const [isModalOpen, setIsModalOpen] =
-      useState(false);
-
-  const [uploading, setUploading] =
-      useState(false);
-
-  const [error, setError] =
-      useState("");
-
-  const [imageFile, setImageFile] =
-      useState(null);
-
-  const [imagePreview, setImagePreview] =
-      useState("");
+  const [activeFilter, setActiveFilter] = useState("all");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState("");
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState("");
 
   const [formData, setFormData] = useState({
     name: "",
@@ -134,23 +116,12 @@ const Auction = () => {
     description: "",
   });
 
-  const [showBidModal, setShowBidModal] =
-      useState(false);
-
-  const [selectedEquipment, setSelectedEquipment] =
-      useState(null);
-
-  const [bidAmount, setBidAmount] =
-      useState("");
-
-  const [existingBid, setExistingBid] =
-      useState(null);
-
-  const [savingBid, setSavingBid] =
-      useState(false);
-
-  const [myBids, setMyBids] =
-      useState({});
+  const [showBidModal, setShowBidModal] = useState(false);
+  const [selectedEquipment, setSelectedEquipment] = useState(null);
+  const [bidAmount, setBidAmount] = useState("");
+  const [existingBid, setExistingBid] = useState(null);
+  const [savingBid, setSavingBid] = useState(false);
+  const [myBids, setMyBids] = useState({});
 
   useEffect(() => {
     fetchEquipment();
@@ -215,9 +186,7 @@ const Auction = () => {
     if (!window.confirm("Delete this listing?")) return;
 
     try {
-      await deleteDoc(
-          doc(db, "equipmentListings", id)
-      );
+      await deleteDoc(doc(db, "equipmentListings", id));
 
       setEquipmentListings((prev) =>
           prev.filter((item) => item.id !== id)
@@ -231,6 +200,16 @@ const Auction = () => {
   };
 
   const openBidModal = (equipment) => {
+    if (!user) {
+      alert("Please login before placing a bid.");
+      return;
+    }
+
+    if (equipment.userId && equipment.userId === user.uid) {
+      alert("You cannot place a bid on your own equipment.");
+      return;
+    }
+
     setSelectedEquipment(equipment);
 
     const existing = myBids[equipment.id];
@@ -257,6 +236,15 @@ const Auction = () => {
       return;
     }
 
+    if (
+        selectedEquipment.userId &&
+        selectedEquipment.userId === user.uid
+    ) {
+      alert("You cannot place a bid on your own equipment.");
+      setShowBidModal(false);
+      return;
+    }
+
     if (!bidAmount || Number(bidAmount) <= 0) {
       alert("Please enter a valid bid amount.");
       return;
@@ -265,100 +253,63 @@ const Auction = () => {
     setSavingBid(true);
 
     try {
-      const sellerUserId =
-          selectedEquipment.userId || "";
+      const sellerUserId = selectedEquipment.userId || "";
+
+      if (
+          sellerUserId &&
+          sellerUserId === user.uid
+      ) {
+        throw new Error(
+            "You cannot place a bid on your own equipment."
+        );
+      }
 
       const bidData = {
         auctionId: selectedEquipment.id,
-
         equipmentName: selectedEquipment.name,
-
         equipmentImage: selectedEquipment.img,
-
         sellerCompany: selectedEquipment.company,
-
         sellerUserId: sellerUserId,
-
         sector: selectedEquipment.sector,
-
         bidderUserId: user.uid,
-
         bidderName: user.displayName || "",
-
         bidderEmail: user.email || "",
-
         bidderPhoto: user.photoURL || "",
-
         bidAmount: Number(bidAmount),
-
         status: existingBid?.status || "Pending",
-
         updatedAt: serverTimestamp(),
       };
-
-      /* -----------------------------------
-         Update Existing Bid
-      ----------------------------------- */
 
       if (existingBid) {
         await updateDoc(
             doc(db, "auctionBids", existingBid.id),
             bidData
         );
+      } else {
+        await addDoc(collection(db, "auctionBids"), {
+          ...bidData,
+          createdAt: serverTimestamp(),
+        });
       }
-
-      /* -----------------------------------
-         New Bid
-      ----------------------------------- */
-
-      else {
-        await addDoc(
-            collection(db, "auctionBids"),
-            {
-              ...bidData,
-              createdAt: serverTimestamp(),
-            }
-        );
-      }
-
-      /* -----------------------------------
-         Refresh My Bids
-      ----------------------------------- */
 
       await fetchMyBids();
 
       await sendBidNotification({
         auctionId: selectedEquipment.id,
-
         equipmentName: selectedEquipment.name,
-
         sellerCompany: selectedEquipment.company,
-
         sector: selectedEquipment.sector,
-
         bidAmount: Number(bidAmount),
-
         bidderName: user.displayName || "",
-
         bidderEmail: user.email || "",
-
         bidderUserId: user.uid,
-
         bidderPhoto: user.photoURL || "",
-
         status: existingBid?.status || "Pending",
       });
 
-      /* -----------------------------------
-         Close Popup
-      ----------------------------------- */
-
       setShowBidModal(false);
-
       setExistingBid(null);
-
       setSelectedEquipment(null);
-
       setBidAmount("");
 
       alert(
@@ -419,16 +370,7 @@ const Auction = () => {
     setError("");
 
     try {
-      /* ----------------------------------------
-         Upload image to Cloudinary
-      ---------------------------------------- */
-
-      const imageUrl =
-          await uploadToCloudinary(imageFile);
-
-      /* ----------------------------------------
-         Firestore document
-      ---------------------------------------- */
+      const imageUrl = await uploadToCloudinary(imageFile);
 
       const listing = {
         company:
@@ -465,18 +407,10 @@ const Auction = () => {
         createdAt: serverTimestamp(),
       };
 
-      /* ----------------------------------------
-         Save to Firestore
-      ---------------------------------------- */
-
       await addDoc(
           collection(db, "equipmentListings"),
           listing
       );
-
-      /* ----------------------------------------
-         Reset form
-      ---------------------------------------- */
 
       setFormData({
         name: "",
@@ -488,9 +422,7 @@ const Auction = () => {
       });
 
       setImageFile(null);
-
       setImagePreview("");
-
       setIsModalOpen(false);
 
       alert("Equipment uploaded successfully.");
@@ -520,14 +452,10 @@ const Auction = () => {
 
   return (
       <div className="auction-page">
-
-        {/* ---------------- HERO ---------------- */}
-
         <section className="auction-hero">
           <div className="auction-hero-bg" />
 
           <div className="auction-hero-content">
-
             <div className="auction-hero-badge">
               <span className="dot" />
               Verified Industrial Auctions
@@ -545,7 +473,6 @@ const Auction = () => {
             </p>
 
             <div className="auction-hero-ctas">
-
               <button
                   className="btn-primary-red"
                   onClick={() => setIsModalOpen(true)}
@@ -554,7 +481,6 @@ const Auction = () => {
                     size={18}
                     style={{ marginRight: 8 }}
                 />
-
                 Upload Equipment
               </button>
 
@@ -564,25 +490,17 @@ const Auction = () => {
               >
                 Browse Auctions
               </a>
-
             </div>
-
           </div>
         </section>
-
-        {/* ---------------- LISTINGS ---------------- */}
 
         <section
             className="listings-section"
             id="listings"
         >
-
           <div className="listings-inner">
-
             <div className="listings-header">
-
               <div>
-
                 <p className="section-label">
                   Live Auction Items
                 </p>
@@ -590,13 +508,10 @@ const Auction = () => {
                 <h2 className="section-title">
                   Current Inventory
                 </h2>
-
               </div>
 
               <div className="filter-pills">
-
                 {filters.map((filter) => (
-
                     <button
                         key={filter}
                         className={`filter-pill ${
@@ -613,137 +528,132 @@ const Auction = () => {
                           : filter.charAt(0).toUpperCase() +
                           filter.slice(1)}
                     </button>
-
                 ))}
-
               </div>
-
             </div>
 
             <div className="equipment-grid">
+              {filteredListings.map((item) => {
+                const isOwner =
+                    user &&
+                    item.userId &&
+                    item.userId === user.uid;
 
-              {filteredListings.map((item) => (
+                const hasExistingBid =
+                    Boolean(myBids[item.id]);
 
-                  <div
-                      className="equipment-card"
-                      key={item.id}
-                  >
+                return (
+                    <div
+                        className="equipment-card"
+                        key={item.id}
+                    >
+                      <div className="equipment-img-wrapper">
+                        <img
+                            src={item.img}
+                            alt={item.name}
+                            className="equipment-card-img"
+                            loading="lazy"
+                        />
 
-                    <div className="equipment-img-wrapper">
+                        <span
+                            className={`equipment-sector-badge ${item.sector}`}
+                        >
+                                            {item.sector === "oil"
+                                                ? "Oil & Gas"
+                                                : item.sector === "civil"
+                                                    ? "Civil"
+                                                    : "Marine"}
+                                        </span>
 
-                      <img
-                          src={item.img}
-                          alt={item.name}
-                          className="equipment-card-img"
-                          loading="lazy"
-                      />
+                        {item.featured && (
+                            <span className="featured-badge">
+                                                ⭐ Featured
+                                            </span>
+                        )}
 
-                      <span
-                          className={`equipment-sector-badge ${item.sector}`}
-                      >
-                    {item.sector === "oil"
-                        ? "Oil & Gas"
-                        : item.sector === "civil"
-                            ? "Civil"
-                            : "Marine"}
-                  </span>
-
-                      {item.featured && (
-                          <span className="featured-badge">
-                      ⭐ Featured
-                    </span>
-                      )}
-
-                      {user &&
-                          item.userId === user.uid && (
-
-                              <button
-                                  className="delete-listing-btn"
-                                  onClick={() =>
-                                      handleDeleteListing(item.id)
-                                  }
-                              >
-                                <X size={14} />
-                                Delete
-                              </button>
-
-                          )}
-
-                    </div>
-
-                    <div className="equipment-card-body">
-
-                      <p className="equipment-company">
-                        {item.company}
-                      </p>
-
-                      <h3 className="equipment-name">
-                        {item.name}
-                      </h3>
-
-                      <div className="equipment-specs">
-
-                        {item.specs?.map((spec) => (
-
-                            <div
-                                className="equipment-spec"
-                                key={spec.label}
-                            >
-                              {spec.label}
-                              <span>{spec.val}</span>
-                            </div>
-
-                        ))}
-
+                        {user &&
+                            item.userId === user.uid && (
+                                <button
+                                    className="delete-listing-btn"
+                                    onClick={() =>
+                                        handleDeleteListing(
+                                            item.id
+                                        )
+                                    }
+                                >
+                                  <X size={14} />
+                                  Delete
+                                </button>
+                            )}
                       </div>
 
-                      <div className="equipment-footer">
+                      <div className="equipment-card-body">
+                        <p className="equipment-company">
+                          {item.company}
+                        </p>
 
-                        <div>
+                        <h3 className="equipment-name">
+                          {item.name}
+                        </h3>
 
-                          <div className="equipment-price-label">
-                            Asking Price
-                          </div>
-
-                          <div className="equipment-price">
-                            {item.price}
-                          </div>
-
+                        <div className="equipment-specs">
+                          {item.specs?.map((spec) => (
+                              <div
+                                  className="equipment-spec"
+                                  key={spec.label}
+                              >
+                                {spec.label}
+                                <span>{spec.val}</span>
+                              </div>
+                          ))}
                         </div>
 
-                        <button
-                            className="enquire-btn"
-                            onClick={() =>
-                                openBidModal(item)
-                            }
-                        >
-                          {myBids[item.id]
-                              ? "✓ Bid Submitted"
-                              : "Bid Now"}
-                        </button>
+                        <div className="equipment-footer">
+                          <div>
+                            <div className="equipment-price-label">
+                              Asking Price
+                            </div>
 
+                            <div className="equipment-price">
+                              {item.price}
+                            </div>
+                          </div>
+
+                          {isOwner ? (
+                              <button
+                                  className="enquire-btn"
+                                  disabled
+                                  style={{
+                                    opacity: 0.65,
+                                    cursor: "not-allowed",
+                                  }}
+                              >
+                                Your Equipment
+                              </button>
+                          ) : (
+                              <button
+                                  className="enquire-btn"
+                                  onClick={() =>
+                                      openBidModal(item)
+                                  }
+                              >
+                                {hasExistingBid
+                                    ? "✓ Bid Submitted"
+                                    : "Bid Now"}
+                              </button>
+                          )}
+                        </div>
                       </div>
-
                     </div>
-
-                  </div>
-
-              ))}
-
+                );
+              })}
             </div>
-
           </div>
-
         </section>
 
-        {/* ---------------- UPLOAD MODAL ---------------- */}
-
         {isModalOpen && (
-
             <div className="upload-modal-overlay">
-
               <div className="upload-modal glass-panel">
-
                 <button
                     className="close-btn"
                     onClick={() =>
@@ -754,7 +664,6 @@ const Auction = () => {
                 </button>
 
                 <div className="modal-header">
-
                   <h2>
                     Post Equipment for Auction
                   </h2>
@@ -764,7 +673,6 @@ const Auction = () => {
                     visible to verified contractors across
                     the Middle East.
                   </p>
-
                 </div>
 
                 {error && (
@@ -777,33 +685,22 @@ const Auction = () => {
                     onSubmit={handleUploadSubmit}
                     className="upload-form"
                 >
-
-                  {/* Image */}
-
                   <div className="image-upload-area">
-
                     <label className="image-upload-label">
-
                       {imagePreview ? (
-
                           <img
                               src={imagePreview}
                               alt="Preview"
                               className="image-preview"
                           />
-
                       ) : (
-
                           <div className="upload-placeholder">
-
                             <Upload size={34} />
 
                             <span>
-                        Click to choose equipment image
-                      </span>
-
+                                                Click to choose equipment image
+                                            </span>
                           </div>
-
                       )}
 
                       <input
@@ -812,15 +709,10 @@ const Auction = () => {
                           hidden
                           onChange={handleImageChange}
                       />
-
                     </label>
-
                   </div>
 
-                  {/* Equipment */}
-
                   <div className="form-group">
-
                     <label>
                       Equipment Name
                     </label>
@@ -832,13 +724,10 @@ const Auction = () => {
                         onChange={handleFormChange}
                         placeholder="Equipment Name"
                     />
-
                   </div>
 
                   <div className="form-row">
-
                     <div className="form-group">
-
                       <label>
                         Sector
                       </label>
@@ -859,13 +748,10 @@ const Auction = () => {
                         <option value="marine">
                           Marine
                         </option>
-
                       </select>
-
                     </div>
 
                     <div className="form-group">
-
                       <label>
                         Price
                       </label>
@@ -877,15 +763,11 @@ const Auction = () => {
                           onChange={handleFormChange}
                           placeholder="$250,000"
                       />
-
                     </div>
-
                   </div>
 
                   <div className="form-row">
-
                     <div className="form-group">
-
                       <label>
                         Location
                       </label>
@@ -897,11 +779,9 @@ const Auction = () => {
                           onChange={handleFormChange}
                           placeholder="Dubai, UAE"
                       />
-
                     </div>
 
                     <div className="form-group">
-
                       <label>
                         Condition
                       </label>
@@ -922,15 +802,11 @@ const Auction = () => {
                         <option value="Refurbished">
                           Refurbished
                         </option>
-
                       </select>
-
                     </div>
-
                   </div>
 
                   <div className="form-group">
-
                     <label>
                       Description
                     </label>
@@ -942,7 +818,6 @@ const Auction = () => {
                         onChange={handleFormChange}
                         placeholder="Brief description..."
                     />
-
                   </div>
 
                   <button
@@ -954,23 +829,14 @@ const Auction = () => {
                         ? "Uploading..."
                         : "Post Listing"}
                   </button>
-
                 </form>
-
               </div>
-
             </div>
-
         )}
 
-        {/* ---------------- BID MODAL ---------------- */}
-
         {showBidModal && (
-
             <div className="upload-modal-overlay">
-
               <div className="upload-modal glass-panel">
-
                 <button
                     className="close-btn"
                     onClick={() =>
@@ -1018,13 +884,9 @@ const Auction = () => {
                           ? "Update Bid"
                           : "Submit Bid"}
                 </button>
-
               </div>
-
             </div>
-
         )}
-
       </div>
   );
 };

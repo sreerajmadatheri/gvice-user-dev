@@ -1,5 +1,10 @@
 import { NavLink, Outlet } from "react-router-dom";
-import { User, Gavel, ShieldCheck } from "lucide-react";
+import {
+    User,
+    Gavel,
+    Inbox,
+    ShieldCheck,
+} from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
 const AccountPage = () => {
@@ -115,6 +120,18 @@ const AccountPage = () => {
                 >
                     <Gavel size={17} />
                     My Bids
+                </NavLink>
+
+                <NavLink
+                    to="/profile/received-bids"
+                    className={({ isActive }) =>
+                        `admin-btn ${
+                            isActive ? "" : "admin-btn-secondary"
+                        }`
+                    }
+                >
+                    <Inbox size={17} />
+                    Received Bids
                 </NavLink>
 
                 {isAdmin === true && (

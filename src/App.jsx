@@ -21,6 +21,7 @@ const AdminRoute = lazy(() => import("./components/AdminRoute"));
 const AccountPage = lazy(() => import("./pages/AccountPage"));
 const ProfilePage = lazy(() => import("./pages/ProfilePage"));
 const MyBidsPage = lazy(() => import("./pages/MyBidsPage"));
+const ReceivedBidsPage = lazy(() => import("./pages/ReceivedBidsPage"));
 
 // Admin
 const AdminLayout = lazy(() => import("./pages/admin/AdminLayout"));
@@ -55,7 +56,10 @@ function App() {
                     <Routes>
                         {/* Public Routes */}
 
-                        <Route path="/" element={<Home />} />
+                        <Route
+                            path="/"
+                            element={<Home />}
+                        />
 
                         <Route
                             path="/auction"
@@ -66,15 +70,30 @@ function App() {
                             }
                         />
 
-                        <Route path="/news" element={<NewsRoom />} />
+                        <Route
+                            path="/news"
+                            element={<NewsRoom />}
+                        />
 
-                        <Route path="/tenders" element={<Tenders />} />
+                        <Route
+                            path="/tenders"
+                            element={<Tenders />}
+                        />
 
-                        <Route path="/projects" element={<Projects />} />
+                        <Route
+                            path="/projects"
+                            element={<Projects />}
+                        />
 
-                        <Route path="/article/:id" element={<Article />} />
+                        <Route
+                            path="/article/:id"
+                            element={<Article />}
+                        />
 
-                        <Route path="/seed" element={<SeedData />} />
+                        <Route
+                            path="/seed"
+                            element={<SeedData />}
+                        />
 
                         {/* User Account */}
 
@@ -86,11 +105,22 @@ function App() {
                                 </ProtectedRoute>
                             }
                         >
-                            <Route index element={<ProfilePage />} />
+                            {/* Profile */}
+                            <Route
+                                index
+                                element={<ProfilePage />}
+                            />
 
+                            {/* My Bids */}
                             <Route
                                 path="bids"
                                 element={<MyBidsPage />}
+                            />
+
+                            {/* Received Bids */}
+                            <Route
+                                path="received-bids"
+                                element={<ReceivedBidsPage />}
                             />
 
                             {/* Admin Area */}
@@ -129,7 +159,6 @@ function App() {
                                         path="bids"
                                         element={<ManageBids />}
                                     />
-
                                 </Route>
                             </Route>
                         </Route>
