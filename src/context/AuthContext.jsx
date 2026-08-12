@@ -7,6 +7,7 @@ import {
   signOut,
   signInWithPopup,
 } from "firebase/auth";
+
 import { doc, getDoc } from "firebase/firestore";
 
 import { auth, db, googleProvider } from "../lib/firebase";
@@ -44,9 +45,8 @@ export const AuthProvider = ({ children }) => {
               // Load user profile
               // -----------------------------------------
 
-              const userProfile = await getUserProfile(
-                  currentUser.uid
-              );
+              const userProfile =
+                  await getUserProfile(currentUser.uid);
 
               setProfile(userProfile);
 
@@ -60,7 +60,8 @@ export const AuthProvider = ({ children }) => {
                   currentUser.uid
               );
 
-              const adminSnap = await getDoc(adminRef);
+              const adminSnap =
+                  await getDoc(adminRef);
 
               const adminStatus =
                   adminSnap.exists() &&
@@ -112,7 +113,10 @@ export const AuthProvider = ({ children }) => {
   // Email Login
   // -----------------------------------------
 
-  const loginWithEmail = async (email, password) => {
+  const loginWithEmail = async (
+      email,
+      password
+  ) => {
     return signInWithEmailAndPassword(
         auth,
         email,

@@ -9,6 +9,7 @@ import {
   getFirestore,
   connectFirestoreEmulator,
 } from "firebase/firestore";
+import { getMessaging, isSupported } from "firebase/messaging";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -33,12 +34,25 @@ export const appleProvider = new OAuthProvider("apple.com");
 // Firestore
 export const db = getFirestore(app);
 
+// Firebase Cloud Messaging
+export const messaging = isSupported().then((supported) => {
+  if (!supported) {
+    console.warn("Firebase Cloud Messaging is not supported in this browser.");
+    return null;
+  }
+
+  return getMessaging(app);
+});
+
 // Local Emulator Support
 if (import.meta.env.VITE_USE_FIREBASE_EMULATORS === "true") {
-  const host = import.meta.env.VITE_FIREBASE_EMULATOR_HOST || "127.0.0.1";
+  const host =
+      import.meta.env.VITE_FIREBASE_EMULATOR_HOST || "127.0.0.1";
+
   const firestorePort = Number(
       import.meta.env.VITE_FIRESTORE_EMULATOR_PORT || 8080
   );
+
   const authPort = Number(
       import.meta.env.VITE_FIREBASE_AUTH_EMULATOR_PORT || 9099
   );
@@ -46,6 +60,7 @@ if (import.meta.env.VITE_USE_FIREBASE_EMULATORS === "true") {
   try {
     connectFirestoreEmulator(db, host, firestorePort);
     connectAuthEmulator(auth, `http://${host}:${authPort}`);
+
     console.log("Firebase Emulator Connected");
   } catch (err) {
     console.warn("Emulator already connected.");

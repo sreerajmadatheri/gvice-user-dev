@@ -27,9 +27,13 @@ service cloud.firestore {
     // ==========================================
 
     match /admins/{adminId} {
+
+      // User can check only their own admin document.
       allow read: if isAuthenticated()
         && request.auth.uid == adminId;
 
+      // Admin records must be managed manually
+      // through Firebase Console or trusted backend.
       allow write: if false;
     }
 
@@ -39,11 +43,54 @@ service cloud.firestore {
     // ==========================================
 
     match /users/{userId} {
+
+      // User can manage their own profile.
+      // Admin can manage all profiles.
       allow read, write: if isAdmin()
         || (
           isAuthenticated()
           && request.auth.uid == userId
         );
+
+      // ==========================================
+      // FCM TOKENS
+      // ==========================================
+
+      match /fcmTokens/{tokenId} {
+
+        // User can read their own tokens.
+        // Admin can read all tokens.
+        allow read: if isAdmin()
+          || (
+            isAuthenticated()
+            && request.auth.uid == userId
+          );
+
+        // User can create only their own token.
+        allow create: if isAdmin()
+          || (
+            isAuthenticated()
+            && request.auth.uid == userId
+            && request.resource.data.userId == request.auth.uid
+          );
+
+        // User can update only their own token.
+        // The token cannot be transferred to another user.
+        allow update: if isAdmin()
+          || (
+            isAuthenticated()
+            && request.auth.uid == userId
+            && resource.data.userId == request.auth.uid
+            && request.resource.data.userId == request.auth.uid
+          );
+
+        // User can remove their own token.
+        allow delete: if isAdmin()
+          || (
+            isAuthenticated()
+            && request.auth.uid == userId
+          );
+      }
     }
 
 
@@ -52,7 +99,11 @@ service cloud.firestore {
     // ==========================================
 
     match /news/{newsId} {
+
+      // Publicly readable.
       allow read: if true;
+
+      // Only admins can create/update/delete.
       allow write: if isAdmin();
     }
 
@@ -62,7 +113,11 @@ service cloud.firestore {
     // ==========================================
 
     match /tenders/{tenderId} {
+
+      // Publicly readable.
       allow read: if true;
+
+      // Only admins can create/update/delete.
       allow write: if isAdmin();
     }
 
@@ -76,21 +131,22 @@ service cloud.firestore {
       // Everyone can view equipment.
       allow read: if true;
 
-      // Admin can create, update and delete any equipment.
-      allow create, update, delete: if isAdmin();
+      // Admin can create/update/delete anything.
+      allow write: if isAdmin();
 
       // Normal authenticated user can create
-      // equipment only for themselves.
+      // only a listing belonging to themselves.
       allow create: if isAuthenticated()
         && request.resource.data.userId == request.auth.uid;
 
-      // Normal authenticated user can update
-      // only their own equipment.
-      //
-      // Ownership cannot be transferred.
+      // Normal user can update only their own listing
+      // and cannot transfer ownership to another user.
       allow update: if isAuthenticated()
         && resource.data.userId == request.auth.uid
         && request.resource.data.userId == request.auth.uid;
+
+      // Normal users cannot delete listings.
+      allow delete: if isAdmin();
     }
 
 
@@ -99,7 +155,11 @@ service cloud.firestore {
     // ==========================================
 
     match /projects/{projectId} {
+
+      // Publicly readable.
       allow read: if true;
+
+      // Only admins can create/update/delete.
       allow write: if isAdmin();
     }
 
@@ -110,19 +170,9 @@ service cloud.firestore {
 
     match /auctionBids/{bidId} {
 
-      // ----------------------------------------
-      // READ
-      // ----------------------------------------
-      //
-      // Admin:
-      //   Can read all bids.
-      //
-      // Bidder:
-      //   Can read their own bids.
-      //
-      // Seller:
-      //   Can read bids received for their equipment.
-      //
+      // Admin can read every bid.
+      // Bidder can read their own bids.
+      // Seller can read bids received for their own equipment.
       allow read: if isAdmin()
         || (
           isAuthenticated()
@@ -132,70 +182,30 @@ service cloud.firestore {
           )
         );
 
-
-      // ----------------------------------------
-      // CREATE
-      // ----------------------------------------
-      //
-      // A logged-in user can create a bid only
-      // for themselves.
-      //
+      // A logged-in user can create a bid only for themselves.
       allow create: if isAuthenticated()
         && request.resource.data.bidderUserId == request.auth.uid;
 
-
-      // ----------------------------------------
-      // UPDATE
-      // ----------------------------------------
-      //
-      // Admin:
-      //   Can update anything.
-      //
-      // Bidder:
-      //   Can update their own bid amount/details,
-      //   but cannot change bidder identity,
-      //   seller identity or status.
-      //
-      // Seller:
-      //   Can change the bid status,
-      //   but cannot change bidder, seller or
-      //   bid amount.
-      //
+      // Bidder can update their own bid,
+      // but cannot change bidder identity or seller identity or status.
       allow update: if isAdmin()
-
         || (
           isAuthenticated()
           && resource.data.bidderUserId == request.auth.uid
-          && request.resource.data.bidderUserId
-              == resource.data.bidderUserId
-          && request.resource.data.sellerUserId
-              == resource.data.sellerUserId
-          && request.resource.data.status
-              == resource.data.status
+          && request.resource.data.bidderUserId == resource.data.bidderUserId
+          && request.resource.data.sellerUserId == resource.data.sellerUserId
+          && request.resource.data.status == resource.data.status
         )
-
         || (
           isAuthenticated()
           && resource.data.sellerUserId == request.auth.uid
-          && request.resource.data.bidderUserId
-              == resource.data.bidderUserId
-          && request.resource.data.sellerUserId
-              == resource.data.sellerUserId
-          && request.resource.data.bidAmount
-              == resource.data.bidAmount
+          && request.resource.data.bidderUserId == resource.data.bidderUserId
+          && request.resource.data.sellerUserId == resource.data.sellerUserId
+          && request.resource.data.bidAmount == resource.data.bidAmount
         );
 
-
-      // ----------------------------------------
-      // DELETE
-      // ----------------------------------------
-      //
       // Admin can delete any bid.
-      //
       // Bidder can delete their own bid.
-      //
-      // Seller cannot delete a received bid.
-      //
       allow delete: if isAdmin()
         || (
           isAuthenticated()
