@@ -53,6 +53,12 @@ src/App.jsx
 src/pages/admin/Admin.css
 src/pages/MyBidsPage.jsx
 
+Changes on 16-Aug-2026
+----------------------
+src/pages/ProfilePage.jsx
+src/services/notificationService.js
+update /functions folder
+
 Delete
 
 https://formspree.io/f/mqerngga

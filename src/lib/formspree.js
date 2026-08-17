@@ -1,67 +1,116 @@
-const endpoint = import.meta.env.VITE_FORMSPREE_ENDPOINT;
+import {
+    httpsCallable,
+} from "firebase/functions";
+
+import {
+    functions,
+} from "./firebase";
+
+
+// ---------------------------------------------------------
+// Firebase Callable Function
+// ---------------------------------------------------------
+
+const notifyBid = httpsCallable(
+    functions,
+    "notifyBid"
+);
+
+
+// ---------------------------------------------------------
+// Send Bid Notification
+// ---------------------------------------------------------
 
 export async function sendBidNotification(data) {
 
-    if (!endpoint) {
-        console.warn("Formspree endpoint not configured.");
-        return;
-    }
-
     try {
 
-        const response = await fetch(endpoint, {
+        console.log(
+            "Calling Firebase notifyBid function..."
+        );
 
-            method: "POST",
+        console.log(
+            "Notification data:",
+            data
+        );
 
-            headers: {
-                "Content-Type": "application/json",
-                Accept: "application/json",
-            },
 
-            body: JSON.stringify({
+        const result = await notifyBid({
 
-                subject: `🚨 New Auction Bid - ${data.equipmentName}`,
+            auctionId:
+            data.auctionId,
 
-                equipment: data.equipmentName,
+            equipmentName:
+            data.equipmentName,
 
-                company: data.sellerCompany,
+            sellerCompany:
+            data.sellerCompany,
 
-                sector: data.sector,
+            sellerUserId:
+            data.sellerUserId,
 
-                bidAmount: data.bidAmount,
+            sector:
+            data.sector,
 
-                bidderName: data.bidderName,
+            bidAmount:
+            data.bidAmount,
 
-                bidderEmail: data.bidderEmail,
+            bidderName:
+            data.bidderName,
 
-                bidderUid: data.bidderUserId,
+            bidderEmail:
+            data.bidderEmail,
 
-                bidderPhoto: data.bidderPhoto,
+            bidderUserId:
+            data.bidderUserId,
 
-                auctionId: data.auctionId,
+            bidderPhoto:
+            data.bidderPhoto,
 
-                status: data.status,
+            status:
+            data.status,
 
-                date: new Date().toLocaleDateString(),
+            notificationType:
+                data.notificationType ||
+                "created",
 
-                time: new Date().toLocaleTimeString(),
-
-            }),
-
+            oldBidAmount:
+                data.oldBidAmount ??
+                null,
         });
 
-        if (!response.ok) {
 
-            throw new Error("Formspree notification failed.");
+        console.log(
+            "Bid notification response:",
+            result.data
+        );
 
-        }
 
-        console.log("Bid notification sent.");
+        return result.data;
 
-    } catch (err) {
+    } catch (error) {
 
-        console.error("Formspree:", err);
+        console.error(
+            "Bid notification failed:",
+            error
+        );
 
+        console.error(
+            "Error code:",
+            error?.code
+        );
+
+        console.error(
+            "Error message:",
+            error?.message
+        );
+
+        // -----------------------------------------------------
+        // IMPORTANT
+        // Notification failure must NOT break the actual
+        // auction bid operation.
+        // -----------------------------------------------------
+
+        return null;
     }
-
 }

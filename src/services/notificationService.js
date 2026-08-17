@@ -2,42 +2,27 @@ import { getToken } from "firebase/messaging";
 import {
     doc,
     setDoc,
+    getDoc,
     serverTimestamp,
 } from "firebase/firestore";
 
 import { db, messaging } from "../lib/firebase";
 
-// Firebase Console → Project Settings → Cloud Messaging
 const VAPID_PUBLIC_KEY =
     "BEfq-NXz6hq4MpP2ALkxRF0Arro9gOap1bzUHuE4j59p-bIDhqQGiKKt38nijfdYW_M_Vd0jEGlKf4XwjMNNUFw";
 
-
 export const registerForPushNotifications = async (user) => {
-    // -----------------------------------------
-    // Validate authenticated user
-    // -----------------------------------------
-
     if (!user?.uid) {
         console.warn(
             "Push notification registration skipped: no authenticated user."
         );
-
         return null;
     }
 
-
-    // -----------------------------------------
-    // Check browser support
-    // -----------------------------------------
-
-    if (
-        typeof window === "undefined" ||
-        !("Notification" in window)
-    ) {
+    if (!("Notification" in window)) {
         console.warn(
             "Push notifications are not supported by this browser."
         );
-
         return null;
     }
 
@@ -45,15 +30,32 @@ export const registerForPushNotifications = async (user) => {
         console.warn(
             "Service workers are not supported by this browser."
         );
-
         return null;
     }
 
-
     try {
-        // -----------------------------------------
-        // Wait for Firebase Messaging instance
-        // -----------------------------------------
+        console.log(
+            "---------------------------------------------"
+        );
+
+        console.log(
+            "Starting FCM registration for:",
+            user.uid
+        );
+
+        console.log(
+            "Firebase project:",
+            import.meta.env.VITE_FIREBASE_PROJECT_ID
+        );
+
+        console.log(
+            "Using Firebase emulators:",
+            import.meta.env.VITE_USE_FIREBASE_EMULATORS
+        );
+
+        // --------------------------------------------------
+        // Firebase Messaging
+        // --------------------------------------------------
 
         const messagingInstance = await messaging;
 
@@ -65,96 +67,89 @@ export const registerForPushNotifications = async (user) => {
             return null;
         }
 
+        // --------------------------------------------------
+        // Browser notification permission
+        // --------------------------------------------------
 
-        // -----------------------------------------
-        // Request notification permission
-        // -----------------------------------------
-
-        let permission = Notification.permission;
+        const permission =
+            Notification.permission === "granted"
+                ? "granted"
+                : await Notification.requestPermission();
 
         console.log(
-            "Current notification permission:",
+            "Notification permission:",
             permission
         );
 
-        if (permission === "default") {
-            console.log(
-                "Requesting notification permission..."
-            );
-
-            permission =
-                await Notification.requestPermission();
-
-            console.log(
-                "Notification permission result:",
-                permission
-            );
-        }
-
         if (permission !== "granted") {
             console.warn(
-                "Notification permission was not granted:",
-                permission
+                "Notification permission was not granted."
             );
 
             return null;
         }
 
-
-        // -----------------------------------------
-        // Register Firebase Messaging Service Worker
-        // -----------------------------------------
-
-        const serviceWorkerUrl =
-            `${import.meta.env.BASE_URL}firebase-messaging-sw.js`;
-
-        console.log(
-            "Registering Firebase Messaging service worker:",
-            serviceWorkerUrl
-        );
+        // --------------------------------------------------
+        // Service Worker
+        // --------------------------------------------------
 
         const serviceWorkerRegistration =
             await navigator.serviceWorker.register(
-                serviceWorkerUrl
+                "/gvice-user-dev/firebase-messaging-sw.js"
             );
 
         console.log(
-            "Firebase Messaging service worker registered:",
+            "Service worker registered:",
             serviceWorkerRegistration.scope
         );
 
-
-        // -----------------------------------------
-        // Wait until service worker is ready
-        // -----------------------------------------
-
-        await navigator.serviceWorker.ready;
-
         console.log(
-            "Firebase Messaging service worker is ready."
+            "Service worker state immediately after registration:",
+            serviceWorkerRegistration.active?.state || "not active yet"
         );
 
+        // --------------------------------------------------
+        // IMPORTANT:
+        // Wait until a Service Worker is active
+        // --------------------------------------------------
 
-        // -----------------------------------------
-        // Get FCM token
-        // -----------------------------------------
+        const activeServiceWorkerRegistration =
+            await navigator.serviceWorker.ready;
 
         console.log(
-            "Requesting FCM token..."
+            "Service worker is active:",
+            activeServiceWorkerRegistration.scope
+        );
+
+        console.log(
+            "Active Service Worker state:",
+            activeServiceWorkerRegistration.active?.state
+        );
+
+        if (!activeServiceWorkerRegistration.active) {
+            console.error(
+                "CRITICAL: Service Worker registration is ready, but no active Service Worker exists."
+            );
+
+            return null;
+        }
+
+        // --------------------------------------------------
+        // Get FCM token
+        // --------------------------------------------------
+
+        console.log(
+            "Requesting FCM token using active Service Worker..."
         );
 
         const token = await getToken(
             messagingInstance,
             {
                 vapidKey: VAPID_PUBLIC_KEY,
-                serviceWorkerRegistration,
+                serviceWorkerRegistration:
+                activeServiceWorkerRegistration,
             }
         );
-
-
-        // -----------------------------------------
-        // Validate FCM token
-        // -----------------------------------------
 
         if (!token) {
             console.warn(
@@ -168,13 +163,16 @@ export const registerForPushNotifications = async (user) => {
             "FCM token received successfully."
         );
 
+        console.log(
+            "FCM token length:",
+            token.length
+        );
 
-        // -----------------------------------------
-        // Save token to Firestore
-        // -----------------------------------------
+        // --------------------------------------------------
+        // Firestore token document
+        // --------------------------------------------------
 
-        const tokenId =
-            encodeURIComponent(token);
+        const tokenId = encodeURIComponent(token);
 
         const tokenRef = doc(
             db,
@@ -183,6 +181,15 @@ export const registerForPushNotifications = async (user) => {
             "fcmTokens",
             tokenId
         );
+
+        console.log(
+            "FCM Firestore path:",
+            `users/${user.uid}/fcmTokens/${tokenId}`
+        );
+
+        // --------------------------------------------------
+        // Save token
+        // --------------------------------------------------
 
         await setDoc(
             tokenRef,
@@ -198,39 +205,86 @@ export const registerForPushNotifications = async (user) => {
             }
         );
 
+        console.log(
+            "FCM token setDoc() completed successfully."
+        );
 
-        // -----------------------------------------
-        // Success
-        // -----------------------------------------
+        // --------------------------------------------------
+        // Verify the exact document
+        // --------------------------------------------------
+
+        const savedTokenSnapshot =
+            await getDoc(tokenRef);
 
         console.log(
-            "FCM token registered successfully."
+            "FCM token document exists after write:",
+            savedTokenSnapshot.exists()
+        );
+
+        if (!savedTokenSnapshot.exists()) {
+            console.error(
+                "CRITICAL: setDoc() completed, but getDoc() says the document does not exist."
+            );
+
+            console.error(
+                "Firestore path:",
+                `users/${user.uid}/fcmTokens/${tokenId}`
+            );
+
+            return null;
+        }
+
+        const savedData =
+            savedTokenSnapshot.data();
+
+        console.log(
+            "FCM token document verified successfully."
         );
 
         console.log(
-            "FCM token saved for user:",
-            user.uid
+            "Saved userId:",
+            savedData?.userId
+        );
+
+        console.log(
+            "Saved email:",
+            savedData?.email
+        );
+
+        console.log(
+            "Has token field:",
+            Boolean(savedData?.token)
+        );
+
+        console.log(
+            "Has createdAt:",
+            Boolean(savedData?.createdAt)
+        );
+
+        console.log(
+            "Has updatedAt:",
+            Boolean(savedData?.updatedAt)
+        );
+
+        console.log(
+            "---------------------------------------------"
         );
 
         return token;
 
     } catch (error) {
-        // -----------------------------------------
-        // Detailed error information
-        // -----------------------------------------
-
         console.error(
             "FCM registration error:",
             error
         );
 
         console.error(
-            "FCM error code:",
+            "FCM registration error code:",
             error?.code
         );
 
         console.error(
-            "FCM error message:",
+            "FCM registration error message:",
             error?.message
         );
 

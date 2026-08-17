@@ -1,11 +1,32 @@
-import { useState } from "react";
-import { Bell, CheckCircle, AlertCircle } from "lucide-react";
+import { useEffect, useState } from "react";
+import {
+    Bell,
+    CheckCircle,
+    AlertCircle,
+} from "lucide-react";
 
 import { useAuth } from "../context/AuthContext";
-import { registerForPushNotifications } from "../services/notificationService";
+
+import {
+    collection,
+    getDocs,
+} from "firebase/firestore";
+
+import { db } from "../lib/firebase";
+
+import {
+    registerForPushNotifications,
+} from "../services/notificationService";
+
 
 const ProfilePage = () => {
     const { user, profile } = useAuth();
+
+    const [notificationsEnabled, setNotificationsEnabled] =
+        useState(false);
+
+    const [checkingNotifications, setCheckingNotifications] =
+        useState(true);
 
     const [notificationStatus, setNotificationStatus] =
         useState("idle");
@@ -13,58 +34,151 @@ const ProfilePage = () => {
     const [notificationMessage, setNotificationMessage] =
         useState("");
 
+
+    // -----------------------------------------
+    // Check notification status for THIS user
+    // -----------------------------------------
+
+    useEffect(() => {
+        const checkNotificationStatus = async () => {
+
+            if (!user?.uid) {
+                setNotificationsEnabled(false);
+                setCheckingNotifications(false);
+                return;
+            }
+
+            try {
+                console.log(
+                    "Checking FCM tokens for user:",
+                    user.uid
+                );
+
+                const tokensRef = collection(
+                    db,
+                    "users",
+                    user.uid,
+                    "fcmTokens"
+                );
+
+                const snapshot = await getDocs(tokensRef);
+
+                console.log(
+                    "FCM token documents found:",
+                    snapshot.size
+                );
+
+                setNotificationsEnabled(
+                    !snapshot.empty
+                );
+
+            } catch (error) {
+
+                console.error(
+                    "Error checking FCM token status:",
+                    error
+                );
+
+                setNotificationsEnabled(false);
+
+            } finally {
+
+                setCheckingNotifications(false);
+            }
+        };
+
+        checkNotificationStatus();
+
+    }, [user?.uid]);
+
+
+    // -----------------------------------------
+    // Enable Notifications
+    // -----------------------------------------
+
     const handleEnableNotifications = async () => {
+
         if (!user) {
+
             setNotificationStatus("error");
+
             setNotificationMessage(
                 "You must be logged in to enable notifications."
             );
+
             return;
         }
+
 
         setNotificationStatus("loading");
         setNotificationMessage("");
 
+
         try {
+
+            console.log(
+                "Starting notification registration for:",
+                user.uid
+            );
+
+
             const token =
                 await registerForPushNotifications(user);
 
+
             if (token) {
+
+                console.log(
+                    "Notification registration successful."
+                );
+
+                setNotificationsEnabled(true);
+
                 setNotificationStatus("success");
+
                 setNotificationMessage(
                     "Notifications have been enabled successfully."
                 );
+
             } else {
+
+                console.warn(
+                    "Notification registration did not return a token."
+                );
+
+                setNotificationsEnabled(false);
+
                 setNotificationStatus("error");
+
                 setNotificationMessage(
-                    "Notifications were not enabled. Please check your browser permission settings."
+                    "Notifications could not be enabled. Please check the browser console for the FCM error."
                 );
             }
+
+
         } catch (error) {
+
             console.error(
                 "Notification setup failed:",
                 error
             );
 
+            setNotificationsEnabled(false);
+
             setNotificationStatus("error");
+
             setNotificationMessage(
                 "Unable to enable notifications. Please try again."
             );
         }
     };
 
-    const notificationPermission =
-        typeof window !== "undefined" &&
-        "Notification" in window
-            ? Notification.permission
-            : "unsupported";
-
-    const notificationsAlreadyEnabled =
-        notificationPermission === "granted";
 
     return (
         <div>
+
             <h2>My Profile</h2>
+
 
             {/* -----------------------------------------
                 Profile Information
@@ -76,35 +190,57 @@ const ProfilePage = () => {
                     marginTop: "1.5rem",
                 }}
             >
+
                 <p>
-                    <strong>Display Name:</strong>{" "}
+                    <strong>
+                        Display Name:
+                    </strong>{" "}
+
                     {profile?.displayName ||
                         user?.displayName ||
                         "-"}
                 </p>
 
+
                 <p>
-                    <strong>Email:</strong>{" "}
+                    <strong>
+                        Email:
+                    </strong>{" "}
+
                     {profile?.email ||
                         user?.email ||
                         "-"}
                 </p>
 
+
                 <p>
-                    <strong>Company:</strong>{" "}
+                    <strong>
+                        Company:
+                    </strong>{" "}
+
                     {profile?.company || "-"}
                 </p>
 
+
                 <p>
-                    <strong>Phone:</strong>{" "}
+                    <strong>
+                        Phone:
+                    </strong>{" "}
+
                     {profile?.phone || "-"}
                 </p>
 
+
                 <p>
-                    <strong>Role:</strong>{" "}
+                    <strong>
+                        Role:
+                    </strong>{" "}
+
                     {profile?.role || "user"}
                 </p>
+
             </div>
+
 
             {/* -----------------------------------------
                 Notification Settings
@@ -116,6 +252,7 @@ const ProfilePage = () => {
                     marginTop: "1.5rem",
                 }}
             >
+
                 <div
                     style={{
                         display: "flex",
@@ -124,6 +261,7 @@ const ProfilePage = () => {
                         marginBottom: "0.75rem",
                     }}
                 >
+
                     <Bell size={22} />
 
                     <h3
@@ -133,7 +271,9 @@ const ProfilePage = () => {
                     >
                         Notifications
                     </h3>
+
                 </div>
+
 
                 <p
                     style={{
@@ -145,7 +285,23 @@ const ProfilePage = () => {
                     on your equipment or updates their bid.
                 </p>
 
-                {notificationsAlreadyEnabled ? (
+
+                {/* -----------------------------------------
+                    Checking notification status
+                ----------------------------------------- */}
+
+                {checkingNotifications ? (
+
+                    <div>
+                        Checking notification status...
+                    </div>
+
+                ) : notificationsEnabled ? (
+
+                    /* -----------------------------------------
+                       Notifications enabled
+                    ----------------------------------------- */
+
                     <div
                         style={{
                             display: "flex",
@@ -155,13 +311,21 @@ const ProfilePage = () => {
                             fontWeight: 500,
                         }}
                     >
+
                         <CheckCircle size={20} />
 
                         <span>
                             Notifications are enabled.
                         </span>
+
                     </div>
+
                 ) : (
+
+                    /* -----------------------------------------
+                       Notifications not enabled
+                    ----------------------------------------- */
+
                     <button
                         type="button"
                         className="admin-btn"
@@ -169,22 +333,26 @@ const ProfilePage = () => {
                             handleEnableNotifications
                         }
                         disabled={
-                            notificationStatus ===
-                            "loading"
+                            notificationStatus === "loading"
                         }
                     >
+
                         <Bell size={17} />
 
-                        {notificationStatus ===
-                        "loading"
+                        {notificationStatus === "loading"
                             ? "Enabling..."
                             : "Enable Notifications"}
+
                     </button>
                 )}
 
-                {/* Success message */}
+
+                {/* -----------------------------------------
+                    Success message
+                ----------------------------------------- */}
 
                 {notificationStatus === "success" && (
+
                     <div
                         style={{
                             marginTop: "1rem",
@@ -194,17 +362,23 @@ const ProfilePage = () => {
                             color: "#15803d",
                         }}
                     >
+
                         <CheckCircle size={18} />
 
                         <span>
                             {notificationMessage}
                         </span>
+
                     </div>
                 )}
 
-                {/* Error message */}
+
+                {/* -----------------------------------------
+                    Error message
+                ----------------------------------------- */}
 
                 {notificationStatus === "error" && (
+
                     <div
                         style={{
                             marginTop: "1rem",
@@ -214,16 +388,21 @@ const ProfilePage = () => {
                             color: "#dc2626",
                         }}
                     >
+
                         <AlertCircle size={18} />
 
                         <span>
                             {notificationMessage}
                         </span>
+
                     </div>
                 )}
+
             </div>
+
         </div>
     );
 };
+
 
 export default ProfilePage;
