@@ -1,4 +1,4 @@
-import{c as Xw,j as F,L as K0,a as hu,g as Le,r as U,R as E,_ as Yw,F as Vw,b as _v,q as xv,d as wv,e as Ov,l as Sv}from"./index-pvnVc-dJ.js";import{A as zu,N as Pv}from"./NewsCard-B5JBm8bX.js";import{S as Kw}from"./SubscriptionSection-tk3hPsWI.js";import{m as Av,a as Zw}from"./mockData-DK8me9oU.js";/* empty css             *//**
+import{c as Xw,j as F,L as K0,a as hu,g as Le,r as U,R as E,_ as Yw,F as Vw,b as _v,q as xv,d as wv,e as Ov,l as Sv}from"./index-C5Ey6i-P.js";import{A as zu,N as Pv}from"./NewsCard-BQWFEdPP.js";import{S as Kw}from"./SubscriptionSection-D9ZY-s9i.js";import{m as Av,a as Zw}from"./mockData-DK8me9oU.js";/* empty css             *//**
  * @license lucide-react v0.394.0 - ISC
  *
  * This source code is licensed under the ISC license.
