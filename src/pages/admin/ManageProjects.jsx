@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import {
     collection,
@@ -15,9 +15,13 @@ import {
     Edit2,
     Trash2,
     X,
+    Search,
 } from "lucide-react";
 
 import { db } from "../../lib/firebase";
+
+import "./Admin.css";
+
 
 const EMPTY_PROJECT = {
     name: "",
@@ -26,7 +30,9 @@ const EMPTY_PROJECT = {
     budget: "",
 };
 
+
 const ManageProjects = () => {
+
     const [projects, setProjects] =
         useState([]);
 
@@ -44,28 +50,54 @@ const ManageProjects = () => {
             ...EMPTY_PROJECT,
         });
 
+    const [searchTerm, setSearchTerm] =
+        useState("");
+
     const [saving, setSaving] =
         useState(false);
 
     const [error, setError] =
         useState("");
 
+
+    // =====================================================
+    // LOAD PROJECTS
+    // =====================================================
+
     const loadProjects = async () => {
+
         setLoading(true);
         setError("");
 
         try {
-            const snap = await getDocs(
-                collection(db, "projects")
-            );
 
-            setProjects(
+            const snap =
+                await getDocs(
+                    collection(db, "projects")
+                );
+
+
+            /*
+             * IMPORTANT:
+             *
+             * Firestore data first.
+             * Actual Firestore document ID last.
+             *
+             * This prevents an old "id" field from
+             * overriding the real document ID.
+             */
+
+            const data =
                 snap.docs.map((item) => ({
-                    id: item.id,
                     ...item.data(),
-                }))
-            );
+                    id: item.id,
+                }));
+
+
+            setProjects(data);
+
         } catch (err) {
+
             console.error(
                 "Error loading projects:",
                 err
@@ -74,48 +106,118 @@ const ManageProjects = () => {
             setError(
                 "Unable to load projects."
             );
+
         } finally {
+
             setLoading(false);
+
         }
+
     };
 
+
+    // =====================================================
+    // INITIAL LOAD
+    // =====================================================
+
     useEffect(() => {
+
         loadProjects();
+
     }, []);
+
+
+    // =====================================================
+    // FILTER PROJECTS
+    // =====================================================
+
+    const filteredProjects =
+        useMemo(() => {
+
+            const search =
+                searchTerm
+                    .trim()
+                    .toLowerCase();
+
+
+            if (!search) {
+
+                return projects;
+
+            }
+
+
+            return projects.filter(
+                (project) =>
+                    (project.name || "")
+                        .toLowerCase()
+                        .includes(search)
+            );
+
+        }, [
+            projects,
+            searchTerm,
+        ]);
+
+
+    // =====================================================
+    // OPEN MODAL
+    // =====================================================
 
     const openModal = (
         project = null
     ) => {
+
         setError("");
 
         if (project) {
-            setEditingId(project.id);
+
+            setEditingId(
+                project.id
+            );
 
             setFormData({
-                name: project.name || "",
+                name:
+                    project.name || "",
+
                 sector:
                     project.sector || "",
+
                 status:
                     project.status ||
                     "Planning",
+
                 budget:
                     project.budget || "",
             });
+
         } else {
+
             setEditingId(null);
 
             setFormData({
                 ...EMPTY_PROJECT,
             });
+
         }
 
         setShowModal(true);
+
     };
 
+
+    // =====================================================
+    // CLOSE MODAL
+    // =====================================================
+
     const closeModal = () => {
-        if (saving) return;
+
+        if (saving) {
+            return;
+        }
 
         setEditingId(null);
+
         setShowModal(false);
 
         setFormData({
@@ -123,39 +225,111 @@ const ManageProjects = () => {
         });
 
         setError("");
+
     };
 
+
+    // =====================================================
+    // FORM CHANGE
+    // =====================================================
+
     const handleChange = (e) => {
+
         const {
             name,
             value,
         } = e.target;
 
+
         setFormData((prev) => ({
             ...prev,
             [name]: value,
         }));
+
     };
 
+
+    // =====================================================
+    // SAVE PROJECT
+    // =====================================================
+
     const saveProject = async (e) => {
+
         e.preventDefault();
 
         setSaving(true);
         setError("");
 
+
         try {
+
+            // ---------------------------------------------
+            // Validation
+            // ---------------------------------------------
+
+            const name =
+                formData.name.trim();
+
+            const sector =
+                formData.sector.trim();
+
+            const budget =
+                formData.budget.trim();
+
+
+            if (!name) {
+
+                throw new Error(
+                    "Project name is required."
+                );
+
+            }
+
+            if (!sector) {
+
+                throw new Error(
+                    "Project sector is required."
+                );
+
+            }
+
+            if (!budget) {
+
+                throw new Error(
+                    "Project budget is required."
+                );
+
+            }
+
+
+            // ---------------------------------------------
+            // Firestore payload
+            // ---------------------------------------------
+
             const payload = {
-                name: formData.name.trim(),
-                sector:
-                    formData.sector.trim(),
-                status: formData.status,
-                budget:
-                    formData.budget.trim(),
+
+                name,
+
+                sector,
+
+                status:
+                    formData.status ||
+                    "Planning",
+
+                budget,
+
                 updatedAt:
                     serverTimestamp(),
+
             };
 
+
+            // ---------------------------------------------
+            // UPDATE
+            // ---------------------------------------------
+
             if (editingId) {
+
                 await updateDoc(
                     doc(
                         db,
@@ -164,20 +338,42 @@ const ManageProjects = () => {
                     ),
                     payload
                 );
-            } else {
+
+            }
+
+
+                // ---------------------------------------------
+                // CREATE
+            // ---------------------------------------------
+
+            else {
+
                 await addDoc(
-                    collection(db, "projects"),
+                    collection(
+                        db,
+                        "projects"
+                    ),
                     {
                         ...payload,
+
                         createdAt:
                             serverTimestamp(),
                     }
                 );
+
             }
 
+
+            // ---------------------------------------------
+            // Close + reload
+            // ---------------------------------------------
+
             closeModal();
+
             await loadProjects();
+
         } catch (err) {
+
             console.error(
                 "Error saving project:",
                 err
@@ -187,27 +383,50 @@ const ManageProjects = () => {
                 err.message ||
                 "Unable to save project."
             );
+
         } finally {
+
             setSaving(false);
+
         }
+
     };
 
-    const removeProject = async (id) => {
+
+    // =====================================================
+    // DELETE PROJECT
+    // =====================================================
+
+    const removeProject = async (
+        id
+    ) => {
+
         if (
             !window.confirm(
                 "Delete this project?"
             )
         ) {
+
             return;
+
         }
 
+
         try {
+
             await deleteDoc(
-                doc(db, "projects", id)
+                doc(
+                    db,
+                    "projects",
+                    id
+                )
             );
 
+
             await loadProjects();
+
         } catch (err) {
+
             console.error(
                 "Error deleting project:",
                 err
@@ -216,21 +435,38 @@ const ManageProjects = () => {
             alert(
                 "Unable to delete project."
             );
+
         }
+
     };
 
+
+    // =====================================================
+    // RENDER
+    // =====================================================
+
     return (
+
         <div className="admin-page">
+
+
+            {/* =================================================
+                PAGE HEADER
+            ================================================= */}
 
             <div className="admin-page-header">
 
                 <div>
-                    <h2>Manage Projects</h2>
+
+                    <h2>
+                        Manage Projects
+                    </h2>
 
                     <p
                         style={{
                             marginTop:
                                 "0.35rem",
+
                             color:
                                 "#6b7280",
                         }}
@@ -238,7 +474,9 @@ const ManageProjects = () => {
                         Manage projects stored
                         in Firestore.
                     </p>
+
                 </div>
+
 
                 <button
                     className="admin-btn"
@@ -246,67 +484,244 @@ const ManageProjects = () => {
                         openModal()
                     }
                 >
+
                     <Plus size={18} />
+
                     Add Project
+
                 </button>
 
             </div>
 
+
+            {/* =================================================
+                SEARCH
+            ================================================= */}
+
+            <div
+                className="admin-card"
+                style={{
+                    marginBottom:
+                        "1.5rem",
+                }}
+            >
+
+                <div
+                    style={{
+                        position:
+                            "relative",
+
+                        maxWidth:
+                            "500px",
+                    }}
+                >
+
+                    <Search
+                        size={18}
+                        style={{
+                            position:
+                                "absolute",
+
+                            left:
+                                "0.85rem",
+
+                            top:
+                                "50%",
+
+                            transform:
+                                "translateY(-50%)",
+
+                            color:
+                                "#6b7280",
+
+                            pointerEvents:
+                                "none",
+                        }}
+                    />
+
+                    <input
+                        type="text"
+                        value={
+                            searchTerm
+                        }
+                        onChange={(e) =>
+                            setSearchTerm(
+                                e.target.value
+                            )
+                        }
+                        placeholder="Search projects by name..."
+                        style={{
+                            width:
+                                "100%",
+
+                            padding:
+                                "0.75rem 1rem 0.75rem 2.6rem",
+
+                            border:
+                                "1px solid #d1d5db",
+
+                            borderRadius:
+                                "0.375rem",
+
+                            fontFamily:
+                                "inherit",
+
+                            fontSize:
+                                "0.95rem",
+
+                            boxSizing:
+                                "border-box",
+
+                            outline:
+                                "none",
+                        }}
+                    />
+
+                </div>
+
+
+                {searchTerm && (
+
+                    <p
+                        style={{
+                            margin:
+                                "0.75rem 0 0",
+
+                            color:
+                                "#6b7280",
+
+                            fontSize:
+                                "0.9rem",
+                        }}
+                    >
+
+                        Showing{" "}
+                        <strong>
+                            {
+                                filteredProjects.length
+                            }
+                        </strong>{" "}
+                        project
+                        {
+                            filteredProjects.length === 1
+                                ? ""
+                                : "s"
+                        }{" "}
+                        matching "
+                        {searchTerm}
+                        ".
+
+                    </p>
+
+                )}
+
+            </div>
+
+
+            {/* =================================================
+                PROJECT TABLE
+            ================================================= */}
+
             <div className="admin-card">
 
                 {loading ? (
-                    <p>Loading projects...</p>
+
+                    <p>
+                        Loading projects...
+                    </p>
+
                 ) : error ? (
+
                     <p
                         style={{
-                            color: "#b91c1c",
+                            color:
+                                "#b91c1c",
                         }}
                     >
                         {error}
                     </p>
-                ) : (
-                    <div className="admin-table-wrapper">
 
-                        <table className="admin-table">
+                ) : (
+
+                    <div
+                        className="admin-table-wrapper"
+                    >
+
+                        <table
+                            className="admin-table"
+                        >
 
                             <thead>
+
                             <tr>
-                                <th>Name</th>
-                                <th>Sector</th>
-                                <th>Status</th>
-                                <th>Budget</th>
-                                <th>Actions</th>
+
+                                <th>
+                                    Name
+                                </th>
+
+                                <th>
+                                    Sector
+                                </th>
+
+                                <th>
+                                    Status
+                                </th>
+
+                                <th>
+                                    Budget
+                                </th>
+
+                                <th>
+                                    Actions
+                                </th>
+
                             </tr>
+
                             </thead>
+
 
                             <tbody>
 
-                            {projects.map(
+                            {filteredProjects.map(
                                 (project) => (
 
                                     <tr
-                                        key={project.id}
+                                        key={
+                                            project.id
+                                        }
                                     >
 
                                         <td>
-                                            {project.name}
+                                            {
+                                                project.name
+                                            }
                                         </td>
 
                                         <td>
-                                            {project.sector}
+                                            {
+                                                project.sector
+                                            }
                                         </td>
 
                                         <td>
-                                            {project.status}
+                                            {
+                                                project.status
+                                            }
                                         </td>
 
                                         <td>
-                                            {project.budget}
+                                            {
+                                                project.budget
+                                            }
                                         </td>
 
                                         <td>
 
-                                            <div className="action-btns">
+                                            <div
+                                                className="action-btns"
+                                            >
+
+                                                {/* EDIT */}
 
                                                 <button
                                                     className="icon-action-btn edit"
@@ -317,10 +732,17 @@ const ManageProjects = () => {
                                                     }
                                                     title="Edit"
                                                 >
+
                                                     <Edit2
-                                                        size={16}
+                                                        size={
+                                                            16
+                                                        }
                                                     />
+
                                                 </button>
+
+
+                                                {/* DELETE */}
 
                                                 <button
                                                     className="icon-action-btn delete"
@@ -331,9 +753,13 @@ const ManageProjects = () => {
                                                     }
                                                     title="Delete"
                                                 >
+
                                                     <Trash2
-                                                        size={16}
+                                                        size={
+                                                            16
+                                                        }
                                                     />
+
                                                 </button>
 
                                             </div>
@@ -345,19 +771,29 @@ const ManageProjects = () => {
                                 )
                             )}
 
-                            {projects.length ===
+
+                            {filteredProjects.length ===
                                 0 && (
 
                                     <tr>
+
                                         <td
                                             colSpan="5"
                                             style={{
                                                 textAlign:
                                                     "center",
+
+                                                padding:
+                                                    "2rem",
                                             }}
                                         >
-                                            No projects found.
+
+                                            {searchTerm
+                                                ? `No projects found matching "${searchTerm}".`
+                                                : "No projects found."}
+
                                         </td>
+
                                     </tr>
 
                                 )}
@@ -367,69 +803,123 @@ const ManageProjects = () => {
                         </table>
 
                     </div>
+
                 )}
 
             </div>
 
+
+            {/* =================================================
+                ADD / EDIT MODAL
+            ================================================= */}
+
             {showModal && (
 
-                <div className="admin-modal-overlay">
+                <div
+                    className="admin-modal-overlay"
+                >
 
-                    <div className="admin-modal">
+                    <div
+                        className="admin-modal"
+                    >
+
+                        {/* -----------------------------------------
+                            MODAL HEADER
+                        ----------------------------------------- */}
 
                         <div
                             style={{
-                                display: "flex",
+                                display:
+                                    "flex",
+
                                 justifyContent:
                                     "space-between",
+
                                 alignItems:
                                     "center",
+
                                 marginBottom:
                                     "1rem",
                             }}
                         >
 
                             <h3>
+
                                 {editingId
                                     ? "Edit Project"
                                     : "Add Project"}
+
                             </h3>
+
 
                             <button
                                 className="icon-action-btn"
-                                onClick={closeModal}
-                                disabled={saving}
+                                onClick={
+                                    closeModal
+                                }
+                                disabled={
+                                    saving
+                                }
+                                type="button"
                             >
+
                                 <X size={20} />
+
                             </button>
 
                         </div>
 
+
+                        {/* -----------------------------------------
+                            ERROR
+                        ----------------------------------------- */}
+
                         {error && (
+
                             <div
                                 style={{
                                     marginBottom:
                                         "1rem",
+
                                     padding:
                                         "0.75rem",
+
                                     background:
                                         "#fef2f2",
+
                                     color:
                                         "#b91c1c",
+
                                     border:
                                         "1px solid #fecaca",
-                                    borderRadius: 6,
+
+                                    borderRadius:
+                                        6,
                                 }}
                             >
+
                                 {error}
+
                             </div>
+
                         )}
 
+
+                        {/* -----------------------------------------
+                            FORM
+                        ----------------------------------------- */}
+
                         <form
-                            onSubmit={saveProject}
+                            onSubmit={
+                                saveProject
+                            }
                         >
 
-                            <div className="admin-form-group">
+                            {/* NAME */}
+
+                            <div
+                                className="admin-form-group"
+                            >
 
                                 <label>
                                     Name
@@ -448,7 +938,12 @@ const ManageProjects = () => {
 
                             </div>
 
-                            <div className="admin-form-group">
+
+                            {/* SECTOR */}
+
+                            <div
+                                className="admin-form-group"
+                            >
 
                                 <label>
                                     Sector
@@ -467,7 +962,12 @@ const ManageProjects = () => {
 
                             </div>
 
-                            <div className="admin-form-group">
+
+                            {/* STATUS */}
+
+                            <div
+                                className="admin-form-group"
+                            >
 
                                 <label>
                                     Status
@@ -482,26 +982,41 @@ const ManageProjects = () => {
                                         handleChange
                                     }
                                 >
-                                    <option>
+
+                                    <option value="Planning">
                                         Planning
                                     </option>
 
-                                    <option>
+                                    <option value="Active">
                                         Active
                                     </option>
 
-                                    <option>
+                                    <option value="Bidding">
+                                        Bidding
+                                    </option>
+
+                                    <option value="Execution">
+                                        Execution
+                                    </option>
+
+                                    <option value="Completed">
                                         Completed
                                     </option>
 
-                                    <option>
+                                    <option value="On Hold">
                                         On Hold
                                     </option>
+
                                 </select>
 
                             </div>
 
-                            <div className="admin-form-group">
+
+                            {/* BUDGET */}
+
+                            <div
+                                className="admin-form-group"
+                            >
 
                                 <label>
                                     Budget
@@ -520,27 +1035,43 @@ const ManageProjects = () => {
 
                             </div>
 
-                            <div className="admin-form-actions">
+
+                            {/* FORM ACTIONS */}
+
+                            <div
+                                className="admin-form-actions"
+                            >
 
                                 <button
                                     type="button"
                                     className="admin-btn admin-btn-secondary"
-                                    onClick={closeModal}
-                                    disabled={saving}
+                                    onClick={
+                                        closeModal
+                                    }
+                                    disabled={
+                                        saving
+                                    }
                                 >
+
                                     Cancel
+
                                 </button>
+
 
                                 <button
                                     className="admin-btn"
                                     type="submit"
-                                    disabled={saving}
+                                    disabled={
+                                        saving
+                                    }
                                 >
+
                                     {saving
                                         ? "Saving..."
                                         : editingId
                                             ? "Save"
                                             : "Create"}
+
                                 </button>
 
                             </div>
@@ -554,7 +1085,10 @@ const ManageProjects = () => {
             )}
 
         </div>
+
     );
+
 };
+
 
 export default ManageProjects;

@@ -28,3 +28,7 @@ firestore-schema-export/serviceAccountKey.json
 .env
 .env.local
 .env.*.local
+
+# Firebase Emulator persistent data
+emulator-data/
+scripts/auth-users.json

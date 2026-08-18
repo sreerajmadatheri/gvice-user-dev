@@ -1,85 +1,191 @@
 import {
+    collection,
     doc,
+    getDocs,
     getDoc,
     setDoc,
     updateDoc,
     serverTimestamp,
 } from "firebase/firestore";
+
 import { db } from "../lib/firebase";
+
 
 /**
  * Create user profile if it doesn't already exist.
  */
-export const createUserProfile = async (firebaseUser) => {
-    if (!firebaseUser) return null;
+export const createUserProfile = async (
+    firebaseUser
+) => {
 
-    const userRef = doc(db, "users", firebaseUser.uid);
-    const snapshot = await getDoc(userRef);
+    if (!firebaseUser) {
+        return null;
+    }
+
+
+    const userRef =
+        doc(
+            db,
+            "users",
+            firebaseUser.uid
+        );
+
+
+    const snapshot =
+        await getDoc(userRef);
+
 
     if (!snapshot.exists()) {
+
         const profile = {
-            uid: firebaseUser.uid,
 
-            email: firebaseUser.email || "",
+            uid:
+            firebaseUser.uid,
 
-            displayName: firebaseUser.displayName || "",
+            email:
+                firebaseUser.email || "",
 
-            firstName: "",
+            displayName:
+                firebaseUser.displayName || "",
 
-            lastName: "",
+            firstName:
+                "",
 
-            company: "",
+            lastName:
+                "",
 
-            designation: "",
+            company:
+                "",
 
-            phone: firebaseUser.phoneNumber || "",
+            designation:
+                "",
 
-            country: "",
+            phone:
+                firebaseUser.phoneNumber || "",
 
-            city: "",
+            country:
+                "",
 
-            profileImage: firebaseUser.photoURL || "",
+            city:
+                "",
 
-            role: "user",
+            profileImage:
+                firebaseUser.photoURL || "",
 
-            isApproved: true,
+            role:
+                "user",
 
-            createdAt: serverTimestamp(),
+            isApproved:
+                true,
 
-            updatedAt: serverTimestamp(),
+            createdAt:
+                serverTimestamp(),
+
+            updatedAt:
+                serverTimestamp(),
         };
 
-        await setDoc(userRef, profile);
+
+        await setDoc(
+            userRef,
+            profile
+        );
+
 
         return profile;
     }
 
+
     return snapshot.data();
 };
 
-/**
- * Get complete user profile
- */
-export const getUserProfile = async (uid) => {
-    const ref = doc(db, "users", uid);
 
-    const snapshot = await getDoc(ref);
+/**
+ * Get complete user profile.
+ */
+export const getUserProfile = async (
+    uid
+) => {
+
+    const ref =
+        doc(
+            db,
+            "users",
+            uid
+        );
+
+
+    const snapshot =
+        await getDoc(ref);
+
 
     if (!snapshot.exists()) {
         return null;
     }
 
+
     return snapshot.data();
 };
 
-/**
- * Update profile
- */
-export const updateUserProfile = async (uid, updates) => {
-    const ref = doc(db, "users", uid);
 
-    await updateDoc(ref, {
-        ...updates,
-        updatedAt: serverTimestamp(),
-    });
+/**
+ * Get all user profiles.
+ *
+ * This is intended for administrator use.
+ * Firestore rules already restrict the collection
+ * so that only admins can read other users.
+ */
+export const getAllUsers = async () => {
+
+    const usersRef =
+        collection(
+            db,
+            "users"
+        );
+
+
+    const snapshot =
+        await getDocs(usersRef);
+
+
+    return snapshot.docs.map(
+        (userDoc) => ({
+            id: userDoc.id,
+            ...userDoc.data(),
+        })
+    );
+};
+
+
+/**
+ * Update profile.
+ *
+ * The Firestore rules protect:
+ * - uid
+ * - role
+ * - isApproved
+ *
+ * for normal users.
+ */
+export const updateUserProfile = async (
+    uid,
+    updates
+) => {
+
+    const ref =
+        doc(
+            db,
+            "users",
+            uid
+        );
+
+
+    await updateDoc(
+        ref,
+        {
+            ...updates,
+            updatedAt:
+                serverTimestamp(),
+        }
+    );
 };

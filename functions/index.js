@@ -1,8 +1,11 @@
 const { onCall } = require("firebase-functions/v2/https");
 
 const { setGlobalOptions } = require("firebase-functions");
+
 const { initializeApp } = require("firebase-admin/app");
+
 const { getFirestore } = require("firebase-admin/firestore");
+
 const { getMessaging } = require("firebase-admin/messaging");
 
 const Brevo = require("@getbrevo/brevo");
@@ -24,6 +27,7 @@ setGlobalOptions({
 initializeApp();
 
 const db = getFirestore();
+
 const messaging = getMessaging();
 
 
@@ -36,11 +40,17 @@ const brevoClient = new Brevo.BrevoClient({
 });
 
 
+// =========================================================
+// BID NOTIFICATION HELPERS
+// =========================================================
+
+
 // ---------------------------------------------------------
 // Helper: format bid amount
 // ---------------------------------------------------------
 
 function formatBidAmount(amount) {
+
     if (typeof amount !== "number") {
         return String(amount ?? "");
     }
@@ -57,8 +67,12 @@ function formatBidAmount(amount) {
 // Helper: get seller information
 // ---------------------------------------------------------
 
-async function getSellerInformation(sellerUserId) {
+async function getSellerInformation(
+    sellerUserId
+) {
+
     if (!sellerUserId) {
+
         console.warn(
             "No sellerUserId found in bid document."
         );
@@ -66,13 +80,19 @@ async function getSellerInformation(sellerUserId) {
         return null;
     }
 
-    const sellerRef = db
-        .collection("users")
-        .doc(sellerUserId);
 
-    const sellerSnap = await sellerRef.get();
+    const sellerRef =
+        db
+            .collection("users")
+            .doc(sellerUserId);
+
+
+    const sellerSnap =
+        await sellerRef.get();
+
 
     if (!sellerSnap.exists) {
+
         console.warn(
             `Seller user document not found: ${sellerUserId}`
         );
@@ -80,11 +100,19 @@ async function getSellerInformation(sellerUserId) {
         return null;
     }
 
-    const sellerData = sellerSnap.data();
+
+    const sellerData =
+        sellerSnap.data();
+
 
     return {
-        userId: sellerUserId,
-        email: sellerData.email || "",
+
+        userId:
+        sellerUserId,
+
+        email:
+            sellerData.email || "",
+
         displayName:
             sellerData.displayName ||
             sellerData.name ||
@@ -97,18 +125,25 @@ async function getSellerInformation(sellerUserId) {
 // Helper: get seller FCM tokens
 // ---------------------------------------------------------
 
-async function getSellerTokens(sellerUserId) {
+async function getSellerTokens(
+    sellerUserId
+) {
+
     if (!sellerUserId) {
         return [];
     }
 
-    const tokensSnapshot = await db
-        .collection("users")
-        .doc(sellerUserId)
-        .collection("fcmTokens")
-        .get();
+
+    const tokensSnapshot =
+        await db
+            .collection("users")
+            .doc(sellerUserId)
+            .collection("fcmTokens")
+            .get();
+
 
     if (tokensSnapshot.empty) {
+
         console.log(
             `No FCM tokens found for seller: ${sellerUserId}`
         );
@@ -116,19 +151,31 @@ async function getSellerTokens(sellerUserId) {
         return [];
     }
 
+
     const tokens = [];
 
-    tokensSnapshot.forEach((doc) => {
-        const data = doc.data();
 
-        if (data.token) {
-            tokens.push(data.token);
+    tokensSnapshot.forEach(
+        (doc) => {
+
+            const data =
+                doc.data();
+
+
+            if (data.token) {
+
+                tokens.push(
+                    data.token
+                );
+            }
         }
-    });
+    );
+
 
     console.log(
         `Found ${tokens.length} FCM token(s) for seller: ${sellerUserId}`
     );
+
 
     return tokens;
 }
@@ -139,14 +186,23 @@ async function getSellerTokens(sellerUserId) {
 // ---------------------------------------------------------
 
 async function sendPushNotification({
+
                                         tokens,
+
                                         equipmentName,
+
                                         bidAmount,
+
                                         oldBidAmount,
+
                                         bidderName,
+
                                         notificationType,
+
                                     }) {
+
     if (!tokens.length) {
+
         console.log(
             "Skipping push notification: no FCM tokens."
         );
@@ -154,76 +210,102 @@ async function sendPushNotification({
         return;
     }
 
+
     const isUpdate =
         notificationType === "updated";
 
-    const title = isUpdate
-        ? "Bid Updated"
-        : "New Bid Received";
+
+    const title =
+        isUpdate
+            ? "Bid Updated"
+            : "New Bid Received";
+
 
     let body;
 
+
     if (isUpdate) {
+
         body =
             `${bidderName || "A bidder"} updated their bid ` +
             `from ${formatBidAmount(oldBidAmount)} to ` +
             `${formatBidAmount(bidAmount)} on ` +
             `${equipmentName || "your equipment"}.`;
+
     } else {
+
         body =
             `${bidderName || "A bidder"} placed a bid of ` +
             `${formatBidAmount(bidAmount)} on ` +
             `${equipmentName || "your equipment"}.`;
     }
 
+
     console.log(
         "Sending push notification:",
         {
             title,
             body,
-            tokenCount: tokens.length,
+            tokenCount:
+            tokens.length,
             notificationType,
         }
     );
 
+
     try {
+
         console.log(
             "FCM send started."
         );
 
+
         const response =
-            await messaging.sendEachForMulticast({
-                tokens,
+            await messaging
+                .sendEachForMulticast({
 
-                notification: {
-                    title,
-                    body,
-                },
+                    tokens,
 
-                data: {
-                    type: isUpdate
-                        ? "bid_updated"
-                        : "bid",
-
-                    equipmentName:
-                        equipmentName || "",
-
-                    bidAmount:
-                        String(bidAmount ?? ""),
-
-                    oldBidAmount:
-                        String(oldBidAmount ?? ""),
-                },
-
-                webpush: {
                     notification: {
                         title,
                         body,
-                        icon:
-                            "/gvice-user-dev/favicon.ico",
                     },
-                },
-            });
+
+                    data: {
+
+                        type:
+                            isUpdate
+                                ? "bid_updated"
+                                : "bid",
+
+                        equipmentName:
+                            equipmentName || "",
+
+                        bidAmount:
+                            String(
+                                bidAmount ?? ""
+                            ),
+
+                        oldBidAmount:
+                            String(
+                                oldBidAmount ?? ""
+                            ),
+                    },
+
+                    webpush: {
+
+                        notification: {
+
+                            title,
+
+                            body,
+
+                            icon:
+                                "/gvice-user-dev/favicon.ico",
+                        },
+                    },
+                });
+
 
         console.log(
             "FCM response:",
@@ -243,13 +325,19 @@ async function sendPushNotification({
 
         response.responses.forEach(
             (result, index) => {
+
                 if (!result.success) {
+
                     console.warn(
                         "FCM token failed:",
                         {
+
                             index,
+
                             errorCode:
-                                result.error?.code || "",
+                                result.error?.code ||
+                                "",
+
                             message:
                                 result.error?.message ||
                                 "",
@@ -264,25 +352,31 @@ async function sendPushNotification({
             "FCM send completed successfully."
         );
 
+
         return response;
 
     } catch (error) {
+
         console.error(
             "FCM notification failed:",
             error
         );
+
 
         console.error(
             "FCM error code:",
             error?.code
         );
 
+
         console.error(
             "FCM error message:",
             error?.message
         );
 
+
         // IMPORTANT:
+        //
         // Do NOT throw the error.
         //
         // This allows Brevo email processing
@@ -291,6 +385,7 @@ async function sendPushNotification({
         console.warn(
             "Continuing with email notification despite FCM failure."
         );
+
 
         return null;
     }
@@ -302,15 +397,25 @@ async function sendPushNotification({
 // ---------------------------------------------------------
 
 async function sendEmailNotification({
+
                                          seller,
+
                                          equipmentName,
+
                                          bidAmount,
+
                                          oldBidAmount,
+
                                          bidderName,
+
                                          status,
+
                                          notificationType,
+
                                      }) {
+
     if (!seller?.email) {
+
         console.warn(
             "Skipping email: seller email not found."
         );
@@ -318,47 +423,66 @@ async function sendEmailNotification({
         return null;
     }
 
+
     const isUpdate =
         notificationType === "updated";
 
+
     const formattedAmount =
-        formatBidAmount(bidAmount);
+        formatBidAmount(
+            bidAmount
+        );
+
 
     const formattedOldAmount =
-        formatBidAmount(oldBidAmount);
+        formatBidAmount(
+            oldBidAmount
+        );
 
-    const subject = isUpdate
-        ? `Bid Updated - ${equipmentName || "Your Equipment"}`
-        : `New Bid Received - ${equipmentName || "Your Equipment"}`;
 
-    const heading = isUpdate
-        ? "Your bid has been updated"
-        : "You have received a new bid";
+    const subject =
+        isUpdate
+            ? `Bid Updated - ${equipmentName || "Your Equipment"}`
+            : `New Bid Received - ${equipmentName || "Your Equipment"}`;
 
-    const bidDescription = isUpdate
-        ? `
-            <p>
-                The bid on your equipment has been updated.
-            </p>
 
-            <p>
-                The bidder changed their bid from
-                <strong>${formattedOldAmount}</strong>
-                to
-                <strong>${formattedAmount}</strong>.
-            </p>
-        `
-        : `
-            <p>
-                Someone has placed a new bid on your equipment.
-            </p>
-        `;
+    const heading =
+        isUpdate
+            ? "Your bid has been updated"
+            : "You have received a new bid";
+
+
+    const bidDescription =
+        isUpdate
+
+            ? `
+                <p>
+                    The bid on your equipment has been updated.
+                </p>
+
+                <p>
+                    The bidder changed their bid from
+                    <strong>${formattedOldAmount}</strong>
+                    to
+                    <strong>${formattedAmount}</strong>.
+                </p>
+            `
+
+            : `
+                <p>
+                    Someone has placed a new bid on your equipment.
+                </p>
+            `;
+
 
     const htmlContent = `
+
         <!DOCTYPE html>
 
         <html>
+
         <head>
+
             <meta charset="UTF-8" />
 
             <meta
@@ -368,7 +492,9 @@ async function sendEmailNotification({
             />
 
             <title>${subject}</title>
+
         </head>
+
 
         <body
             style="
@@ -409,6 +535,7 @@ async function sendEmailNotification({
                     >
                         GVICE
                     </h1>
+
 
                     <p
                         style="
@@ -471,6 +598,7 @@ async function sendEmailNotification({
                                 Equipment
                             </td>
 
+
                             <td
                                 style="
                                     padding:10px;
@@ -486,6 +614,7 @@ async function sendEmailNotification({
                         ${
         isUpdate
             ? `
+
                         <tr>
 
                             <td
@@ -498,6 +627,7 @@ async function sendEmailNotification({
                                 Previous Bid
                             </td>
 
+
                             <td
                                 style="
                                     padding:10px;
@@ -508,7 +638,8 @@ async function sendEmailNotification({
                             </td>
 
                         </tr>
-                        `
+
+                                `
             : ""
     }
 
@@ -524,6 +655,7 @@ async function sendEmailNotification({
                             >
                                 Current Bid
                             </td>
+
 
                             <td
                                 style="
@@ -549,6 +681,7 @@ async function sendEmailNotification({
                                 Bidder
                             </td>
 
+
                             <td
                                 style="
                                     padding:10px;
@@ -571,6 +704,7 @@ async function sendEmailNotification({
                             >
                                 Status
                             </td>
+
 
                             <td
                                 style="
@@ -607,6 +741,7 @@ async function sendEmailNotification({
             </div>
 
         </body>
+
         </html>
     `;
 
@@ -614,17 +749,22 @@ async function sendEmailNotification({
     console.log(
         "Sending Brevo email:",
         {
-            to: seller.email,
+            to:
+            seller.email,
+
             subject,
+
             notificationType,
         }
     );
 
 
     try {
+
         console.log(
             "Brevo send started."
         );
+
 
         const response =
             await brevoClient
@@ -632,6 +772,7 @@ async function sendEmailNotification({
                 .sendTransacEmail({
 
                     sender: {
+
                         email:
                             process.env.BREVO_SENDER_EMAIL ||
                             "contact@ventaailabs.com",
@@ -641,15 +782,21 @@ async function sendEmailNotification({
                             "GVICE",
                     },
 
+
                     to: [
+
                         {
-                            email: seller.email,
+
+                            email:
+                            seller.email,
 
                             name:
                                 seller.displayName ||
                                 undefined,
                         },
+
                     ],
+
 
                     subject,
 
@@ -662,18 +809,22 @@ async function sendEmailNotification({
             response
         );
 
+
         return response;
 
     } catch (error) {
+
         console.error(
             "Brevo email failed:",
             error
         );
 
+
         console.error(
             "Brevo error message:",
             error?.message
         );
+
 
         // Do not throw.
         //
@@ -694,18 +845,22 @@ async function processBidNotification(
     notificationType,
     oldBidAmount = null
 ) {
+
     console.log(
         "=========================================="
     );
+
 
     console.log(
         "Processing bid notification"
     );
 
+
     console.log(
         "Notification type:",
         notificationType
     );
+
 
     console.log(
         "Bid:",
@@ -718,6 +873,7 @@ async function processBidNotification(
 
 
     if (!sellerUserId) {
+
         console.warn(
             "Bid does not contain sellerUserId."
         );
@@ -759,7 +915,9 @@ async function processBidNotification(
     // -----------------------------------------------------
 
     try {
+
         await sendPushNotification({
+
             tokens,
 
             equipmentName:
@@ -777,10 +935,12 @@ async function processBidNotification(
         });
 
     } catch (error) {
+
         console.error(
             "Unexpected FCM processing error:",
             error
         );
+
 
         console.warn(
             "Continuing to Brevo email."
@@ -795,7 +955,9 @@ async function processBidNotification(
     // -----------------------------------------------------
 
     try {
+
         await sendEmailNotification({
+
             seller,
 
             equipmentName:
@@ -816,6 +978,7 @@ async function processBidNotification(
         });
 
     } catch (error) {
+
         console.error(
             "Unexpected Brevo processing error:",
             error
@@ -827,15 +990,16 @@ async function processBidNotification(
         "Bid notification processing completed."
     );
 
+
     console.log(
         "=========================================="
     );
 }
 
 
-// ---------------------------------------------------------
+// =========================================================
 // CALLABLE: BID NOTIFICATION
-// ---------------------------------------------------------
+// =========================================================
 //
 // This replaces the old Firestore triggers:
 //
@@ -845,15 +1009,24 @@ async function processBidNotification(
 // The frontend calls this function directly after
 // creating/updating a bid.
 //
-// The function is deployed to asia-south1 instead of
-// relying on a Firestore/Eventarc trigger in me-central2.
-// ---------------------------------------------------------
+// Production region:
+//   asia-south1
+//
+// Local emulator:
+//   127.0.0.1:5001
+//
+// =========================================================
 
 exports.notifyBid = onCall(
+
     {
         region: "asia-south1",
-        secrets: ["BREVO_API_KEY"],
+
+        secrets: [
+            "BREVO_API_KEY",
+        ],
     },
+
 
     async (request) => {
 
@@ -861,12 +1034,15 @@ exports.notifyBid = onCall(
             "=========================================="
         );
 
+
         console.log(
             "notifyBid callable function invoked."
         );
 
+
         const data =
             request.data || {};
+
 
         console.log(
             "Notification request:",
@@ -879,12 +1055,16 @@ exports.notifyBid = onCall(
         // -------------------------------------------------
 
         if (!data.sellerUserId) {
+
             console.warn(
                 "Missing sellerUserId."
             );
 
+
             return {
+
                 success: false,
+
                 message:
                     "Missing sellerUserId.",
             };
@@ -892,12 +1072,16 @@ exports.notifyBid = onCall(
 
 
         if (!data.equipmentName) {
+
             console.warn(
                 "Missing equipmentName."
             );
 
+
             return {
+
                 success: false,
+
                 message:
                     "Missing equipmentName.",
             };
@@ -908,12 +1092,16 @@ exports.notifyBid = onCall(
             data.bidAmount === undefined ||
             data.bidAmount === null
         ) {
+
             console.warn(
                 "Missing bidAmount."
             );
 
+
             return {
+
                 success: false,
+
                 message:
                     "Missing bidAmount.",
             };
@@ -927,6 +1115,7 @@ exports.notifyBid = onCall(
         try {
 
             await processBidNotification(
+
                 data,
 
                 data.notificationType ||
@@ -941,12 +1130,14 @@ exports.notifyBid = onCall(
                 "notifyBid completed successfully."
             );
 
+
             console.log(
                 "=========================================="
             );
 
 
             return {
+
                 success: true,
 
                 message:
@@ -960,12 +1151,14 @@ exports.notifyBid = onCall(
                 error
             );
 
+
             console.log(
                 "=========================================="
             );
 
 
             return {
+
                 success: false,
 
                 message:
@@ -973,5 +1166,396 @@ exports.notifyBid = onCall(
                     "Bid notification failed.",
             };
         }
+    }
+);
+
+
+// =========================================================
+// CALLABLE: SET USER ADMIN STATUS
+// =========================================================
+//
+// Allows an existing administrator to:
+//
+//   - Promote a normal user to Admin
+//   - Remove Admin access from a user
+//
+// SECURITY:
+//
+// The browser is NOT allowed to write directly to:
+//
+//     admins/{userId}
+//
+// Firestore rules keep writes blocked:
+//
+//     allow write: if false;
+//
+// This function uses Firebase Admin SDK and therefore
+// performs the trusted server-side operation.
+//
+// =========================================================
+
+exports.setUserAdmin = onCall(
+
+    {
+        region: "asia-south1",
+    },
+
+
+    async (request) => {
+
+        console.log(
+            "=========================================="
+        );
+
+
+        console.log(
+            "setUserAdmin callable function invoked."
+        );
+
+
+        // -------------------------------------------------
+        // Verify caller authentication
+        // -------------------------------------------------
+
+        if (!request.auth) {
+
+            console.warn(
+                "Unauthenticated setUserAdmin request rejected."
+            );
+
+
+            return {
+
+                success: false,
+
+                message:
+                    "Authentication is required.",
+            };
+        }
+
+
+        const callerUid =
+            request.auth.uid;
+
+
+        console.log(
+            "Admin action requested by:",
+            callerUid
+        );
+
+
+        // -------------------------------------------------
+        // Verify caller is an administrator
+        // -------------------------------------------------
+
+        const callerAdminRef =
+            db
+                .collection("admins")
+                .doc(callerUid);
+
+
+        const callerAdminSnap =
+            await callerAdminRef.get();
+
+
+        const callerIsAdmin =
+            callerAdminSnap.exists &&
+            callerAdminSnap.data()?.role ===
+            "admin";
+
+
+        if (!callerIsAdmin) {
+
+            console.warn(
+                "Unauthorized admin-management attempt:",
+                callerUid
+            );
+
+
+            return {
+
+                success: false,
+
+                message:
+                    "Administrator permission is required.",
+            };
+        }
+
+
+        // -------------------------------------------------
+        // Read request data
+        // -------------------------------------------------
+
+        const data =
+            request.data || {};
+
+
+        const targetUserId =
+            data.targetUserId;
+
+
+        const makeAdmin =
+            data.makeAdmin;
+
+
+        // -------------------------------------------------
+        // Validate target user ID
+        // -------------------------------------------------
+
+        if (
+            !targetUserId ||
+            typeof targetUserId !==
+            "string"
+        ) {
+
+            return {
+
+                success: false,
+
+                message:
+                    "A valid targetUserId is required.",
+            };
+        }
+
+
+        // -------------------------------------------------
+        // Validate makeAdmin
+        // -------------------------------------------------
+
+        if (
+            typeof makeAdmin !==
+            "boolean"
+        ) {
+
+            return {
+
+                success: false,
+
+                message:
+                    "makeAdmin must be true or false.",
+            };
+        }
+
+
+        // -------------------------------------------------
+        // Prevent self-demotion
+        // -------------------------------------------------
+
+        if (
+            targetUserId ===
+            callerUid
+        ) {
+
+            console.warn(
+                "Admin attempted to change own admin status:",
+                callerUid
+            );
+
+
+            return {
+
+                success: false,
+
+                message:
+                    "You cannot change your own administrator status.",
+            };
+        }
+
+
+        // -------------------------------------------------
+        // Verify target user exists
+        // -------------------------------------------------
+
+        const targetUserRef =
+            db
+                .collection("users")
+                .doc(targetUserId);
+
+
+        const targetUserSnap =
+            await targetUserRef.get();
+
+
+        if (!targetUserSnap.exists) {
+
+            return {
+
+                success: false,
+
+                message:
+                    "Target user profile was not found.",
+            };
+        }
+
+
+        const targetUser =
+            targetUserSnap.data();
+
+
+        console.log(
+            "Target user:",
+            {
+                uid:
+                targetUserId,
+
+                email:
+                    targetUser?.email ||
+                    "",
+
+                currentRole:
+                    targetUser?.role ||
+                    "user",
+
+                requestedRole:
+                    makeAdmin
+                        ? "admin"
+                        : "user",
+            }
+        );
+
+
+        // =================================================
+        // PROMOTE USER TO ADMIN
+        // =================================================
+
+        if (makeAdmin) {
+
+            console.log(
+                "Promoting user to admin:",
+                targetUserId
+            );
+
+
+            const batch =
+                db.batch();
+
+
+            const adminRef =
+                db
+                    .collection("admins")
+                    .doc(targetUserId);
+
+
+            // Create/update admin document.
+
+            batch.set(
+                adminRef,
+                {
+                    role: "admin",
+                },
+                {
+                    merge: true,
+                }
+            );
+
+
+            // Keep users/{uid}.role synchronized.
+
+            batch.update(
+                targetUserRef,
+                {
+                    role: "admin",
+                    updatedAt:
+                        new Date(),
+                }
+            );
+
+
+            await batch.commit();
+
+
+            console.log(
+                "User promoted to admin successfully:",
+                targetUserId
+            );
+
+
+            console.log(
+                "=========================================="
+            );
+
+
+            return {
+
+                success: true,
+
+                message:
+                    "User promoted to Admin successfully.",
+
+                userId:
+                targetUserId,
+
+                role:
+                    "admin",
+            };
+        }
+
+
+        // =================================================
+        // REMOVE ADMIN ACCESS
+        // =================================================
+
+        console.log(
+            "Removing admin access:",
+            targetUserId
+        );
+
+
+        const batch =
+            db.batch();
+
+
+        const adminRef =
+            db
+                .collection("admins")
+                .doc(targetUserId);
+
+
+        // Delete the admin record.
+
+        batch.delete(
+            adminRef
+        );
+
+
+        // Synchronize users/{uid}.role.
+
+        batch.update(
+            targetUserRef,
+            {
+                role: "user",
+                updatedAt:
+                    new Date(),
+            }
+        );
+
+
+        await batch.commit();
+
+
+        console.log(
+            "Admin access removed successfully:",
+            targetUserId
+        );
+
+
+        console.log(
+            "=========================================="
+        );
+
+
+        return {
+
+            success: true,
+
+            message:
+                "Admin access removed successfully.",
+
+            userId:
+            targetUserId,
+
+            role:
+                "user",
+        };
     }
 );

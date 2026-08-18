@@ -7,6 +7,7 @@ import {
   Settings,
   Gavel,
   FolderKanban,
+  Users,
 } from "lucide-react";
 
 import {
@@ -28,8 +29,10 @@ const AdminLayout = () => {
 
   return (
       <div className="admin-layout">
+
         {/* Sidebar */}
         <aside className="admin-sidebar">
+
           <div className="admin-brand">
             <h2>
               gvice. <span>Admin</span>
@@ -40,71 +43,108 @@ const AdminLayout = () => {
             </p>
           </div>
 
+
           <nav className="admin-nav">
+
             <div className="admin-menu">
+
               <Link
-                  to="/admin"
-                  className={isActive("/admin") ? "active" : ""}
+                  to="/profile/admin"
+                  className={
+                    isActive("/profile/admin")
+                        ? "admin-nav-link active"
+                        : "admin-nav-link"
+                  }
               >
                 <LayoutDashboard size={20} />
                 Dashboard
               </Link>
 
+
               <Link
-                  to="/admin/news"
-                  className={isActive("/admin/news") ? "active" : ""}
+                  to="/profile/admin/users"
+                  className={
+                    isActive("/profile/admin/users")
+                        ? "admin-nav-link active"
+                        : "admin-nav-link"
+                  }
+              >
+                <Users size={20} />
+                Manage Users
+              </Link>
+
+
+              <Link
+                  to="/profile/admin/news"
+                  className={
+                    isActive("/profile/admin/news")
+                        ? "admin-nav-link active"
+                        : "admin-nav-link"
+                  }
               >
                 <FileText size={20} />
                 Manage News
               </Link>
 
+
               <Link
-                  to="/admin/tenders"
-                  className={isActive("/admin/tenders") ? "active" : ""}
+                  to="/profile/admin/tenders"
+                  className={
+                    isActive("/profile/admin/tenders")
+                        ? "admin-nav-link active"
+                        : "admin-nav-link"
+                  }
               >
                 <Briefcase size={20} />
                 Manage Tenders
               </Link>
 
+
               <Link
-                  to="/admin/equipment"
+                  to="/profile/admin/equipment"
                   className={
-                    isActive("/admin/equipment")
-                        ? "active"
-                        : ""
+                    isActive("/profile/admin/equipment")
+                        ? "admin-nav-link active"
+                        : "admin-nav-link"
                   }
               >
                 <Settings size={20} />
                 Manage Equipment
               </Link>
 
+
               <Link
-                  to="/admin/projects"
+                  to="/profile/admin/projects"
                   className={
-                    isActive("/admin/projects")
-                        ? "active"
-                        : ""
+                    isActive("/profile/admin/projects")
+                        ? "admin-nav-link active"
+                        : "admin-nav-link"
                   }
               >
                 <FolderKanban size={20} />
                 Manage Projects
               </Link>
 
+
               <Link
-                  to="/admin/bids"
+                  to="/profile/admin/bids"
                   className={
-                    isActive("/admin/bids")
-                        ? "active"
-                        : ""
+                    isActive("/profile/admin/bids")
+                        ? "admin-nav-link active"
+                        : "admin-nav-link"
                   }
               >
                 <Gavel size={20} />
                 Manage Bids
               </Link>
+
             </div>
+
           </nav>
 
+
           <div className="admin-sidebar-footer">
+
             <Link
                 to="/"
                 className="admin-nav-link"
@@ -113,6 +153,7 @@ const AdminLayout = () => {
               Back to Site
             </Link>
 
+
             <button
                 onClick={logout}
                 className="admin-nav-link logout-btn"
@@ -120,19 +161,28 @@ const AdminLayout = () => {
               <LogOut size={20} />
               Logout
             </button>
+
           </div>
+
         </aside>
+
 
         {/* Main */}
         <main className="admin-main">
+
           <header className="admin-header">
-            <h1>Admin Portal</h1>
+            <h1>
+              Admin Portal
+            </h1>
           </header>
+
 
           <div className="admin-content-area">
             <Outlet />
           </div>
+
         </main>
+
       </div>
   );
 };
