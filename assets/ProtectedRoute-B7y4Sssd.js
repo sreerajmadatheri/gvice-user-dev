@@ -1,1 +1,0 @@
-import{u as n,j as e,N as i}from"./index-rXyfImV-.js";const o=({children:t})=>{const{user:r,loading:s}=n();return s?e.jsx("div",{style:{display:"flex",justifyContent:"center",alignItems:"center",minHeight:"50vh"},children:"Loading..."}):r?t:e.jsx(i,{to:"/",replace:!0})};export{o as default};
