@@ -1,6 +1,0 @@
-import{c as t,p as r,j as e,L as c}from"./index-rUt6f4m-.js";/**
- * @license lucide-react v0.394.0 - ISC
- *
- * This source code is licensed under the ISC license.
- * See the LICENSE file in the root directory of this source tree.
- */const l=t("ArrowRight",[["path",{d:"M5 12h14",key:"1ays0h"}],["path",{d:"m12 5 7 7-7 7",key:"xquz4c"}]]),d=({news:a,large:s=!1})=>{const i=r();return e.jsxs("article",{className:`news-card ${s?"news-card-large":""} animate-fade-in`,onClick:()=>i(`/article/${a.id}`),children:[e.jsxs("div",{className:"news-image-wrapper",children:[e.jsx("img",{src:a.image,alt:a.title,className:"news-image"}),e.jsx("span",{className:"news-category",children:a.category})]}),e.jsxs("div",{className:"news-content",children:[e.jsxs("div",{className:"news-meta",children:[e.jsx("span",{className:"news-author",children:a.author}),e.jsx("span",{className:"news-date",children:a.date})]}),e.jsx(c,{to:`/article/${a.id}`,className:"news-title-link",children:e.jsx("h3",{className:"news-title",children:a.title})}),s&&e.jsx("p",{className:"news-excerpt",children:a.excerpt}),e.jsxs(c,{to:`/article/${a.id}`,className:"read-more",children:["Read more ",e.jsx(l,{size:16})]})]})]})};export{l as A,d as N};
