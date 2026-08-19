@@ -6,6 +6,8 @@ const { initializeApp } = require("firebase-admin/app");
 
 const { getFirestore } = require("firebase-admin/firestore");
 
+const { getAuth } = require("firebase-admin/auth");
+
 const { getMessaging } = require("firebase-admin/messaging");
 
 const Brevo = require("@getbrevo/brevo");
@@ -27,6 +29,8 @@ setGlobalOptions({
 initializeApp();
 
 const db = getFirestore();
+
+const adminAuth = getAuth();
 
 const messaging = getMessaging();
 
@@ -117,6 +121,7 @@ async function getSellerInformation(
             sellerData.displayName ||
             sellerData.name ||
             "",
+
     };
 }
 
@@ -167,7 +172,9 @@ async function getSellerTokens(
                 tokens.push(
                     data.token
                 );
+
             }
+
         }
     );
 
@@ -186,19 +193,12 @@ async function getSellerTokens(
 // ---------------------------------------------------------
 
 async function sendPushNotification({
-
                                         tokens,
-
                                         equipmentName,
-
                                         bidAmount,
-
                                         oldBidAmount,
-
                                         bidderName,
-
                                         notificationType,
-
                                     }) {
 
     if (!tokens.length) {
@@ -238,6 +238,7 @@ async function sendPushNotification({
             `${bidderName || "A bidder"} placed a bid of ` +
             `${formatBidAmount(bidAmount)} on ` +
             `${equipmentName || "your equipment"}.`;
+
     }
 
 
@@ -290,6 +291,7 @@ async function sendPushNotification({
                             String(
                                 oldBidAmount ?? ""
                             ),
+
                     },
 
                     webpush: {
@@ -297,13 +299,15 @@ async function sendPushNotification({
                         notification: {
 
                             title,
-
                             body,
 
                             icon:
                                 "/gvice-user-dev/favicon.ico",
+
                         },
+
                     },
+
                 });
 
 
@@ -319,10 +323,6 @@ async function sendPushNotification({
         );
 
 
-        // -------------------------------------------------
-        // Check individual token failures
-        // -------------------------------------------------
-
         response.responses.forEach(
             (result, index) => {
 
@@ -331,7 +331,6 @@ async function sendPushNotification({
                     console.warn(
                         "FCM token failed:",
                         {
-
                             index,
 
                             errorCode:
@@ -343,7 +342,9 @@ async function sendPushNotification({
                                 "",
                         }
                     );
+
                 }
+
             }
         );
 
@@ -375,20 +376,15 @@ async function sendPushNotification({
         );
 
 
-        // IMPORTANT:
-        //
-        // Do NOT throw the error.
-        //
-        // This allows Brevo email processing
-        // to continue even when FCM fails.
-
         console.warn(
             "Continuing with email notification despite FCM failure."
         );
 
 
         return null;
+
     }
+
 }
 
 
@@ -397,21 +393,13 @@ async function sendPushNotification({
 // ---------------------------------------------------------
 
 async function sendEmailNotification({
-
                                          seller,
-
                                          equipmentName,
-
                                          bidAmount,
-
                                          oldBidAmount,
-
                                          bidderName,
-
                                          status,
-
                                          notificationType,
-
                                      }) {
 
     if (!seller?.email) {
@@ -517,8 +505,6 @@ async function sendEmailNotification({
                 "
             >
 
-                <!-- Header -->
-
                 <div
                     style="
                         background:#1f4f8f;
@@ -549,8 +535,6 @@ async function sendEmailNotification({
                 </div>
 
 
-                <!-- Content -->
-
                 <div
                     style="
                         padding:28px;
@@ -575,8 +559,6 @@ async function sendEmailNotification({
 
                     ${bidDescription}
 
-
-                    <!-- Bid details -->
 
                     <table
                         style="
@@ -780,6 +762,7 @@ async function sendEmailNotification({
                         name:
                             process.env.BREVO_SENDER_NAME ||
                             "GVICE",
+
                     },
 
 
@@ -793,6 +776,7 @@ async function sendEmailNotification({
                             name:
                                 seller.displayName ||
                                 undefined,
+
                         },
 
                     ],
@@ -801,6 +785,7 @@ async function sendEmailNotification({
                     subject,
 
                     htmlContent,
+
                 });
 
 
@@ -826,13 +811,10 @@ async function sendEmailNotification({
         );
 
 
-        // Do not throw.
-        //
-        // The notification Function should finish
-        // gracefully even if email fails.
-
         return null;
+
     }
+
 }
 
 
@@ -882,10 +864,6 @@ async function processBidNotification(
     }
 
 
-    // -----------------------------------------------------
-    // Notify only seller/equipment owner
-    // -----------------------------------------------------
-
     const seller =
         await getSellerInformation(
             sellerUserId
@@ -897,22 +875,11 @@ async function processBidNotification(
     }
 
 
-    // -----------------------------------------------------
-    // Get seller FCM tokens
-    // -----------------------------------------------------
-
     const tokens =
         await getSellerTokens(
             sellerUserId
         );
 
-
-    // -----------------------------------------------------
-    // PUSH NOTIFICATION
-    //
-    // IMPORTANT:
-    // FCM failure must NOT stop Brevo.
-    // -----------------------------------------------------
 
     try {
 
@@ -932,6 +899,7 @@ async function processBidNotification(
             bid.bidderName,
 
             notificationType,
+
         });
 
     } catch (error) {
@@ -945,14 +913,9 @@ async function processBidNotification(
         console.warn(
             "Continuing to Brevo email."
         );
+
     }
 
-
-    // -----------------------------------------------------
-    // EMAIL NOTIFICATION
-    //
-    // Independent from FCM.
-    // -----------------------------------------------------
 
     try {
 
@@ -975,6 +938,7 @@ async function processBidNotification(
             bid.status,
 
             notificationType,
+
         });
 
     } catch (error) {
@@ -983,6 +947,7 @@ async function processBidNotification(
             "Unexpected Brevo processing error:",
             error
         );
+
     }
 
 
@@ -994,27 +959,12 @@ async function processBidNotification(
     console.log(
         "=========================================="
     );
+
 }
 
 
 // =========================================================
 // CALLABLE: BID NOTIFICATION
-// =========================================================
-//
-// This replaces the old Firestore triggers:
-//
-//   notifyOnNewBid
-//   notifyOnBidUpdate
-//
-// The frontend calls this function directly after
-// creating/updating a bid.
-//
-// Production region:
-//   asia-south1
-//
-// Local emulator:
-//   127.0.0.1:5001
-//
 // =========================================================
 
 exports.notifyBid = onCall(
@@ -1050,10 +1000,6 @@ exports.notifyBid = onCall(
         );
 
 
-        // -------------------------------------------------
-        // Basic validation
-        // -------------------------------------------------
-
         if (!data.sellerUserId) {
 
             console.warn(
@@ -1067,7 +1013,9 @@ exports.notifyBid = onCall(
 
                 message:
                     "Missing sellerUserId.",
+
             };
+
         }
 
 
@@ -1084,7 +1032,9 @@ exports.notifyBid = onCall(
 
                 message:
                     "Missing equipmentName.",
+
             };
+
         }
 
 
@@ -1104,13 +1054,11 @@ exports.notifyBid = onCall(
 
                 message:
                     "Missing bidAmount.",
+
             };
+
         }
 
-
-        // -------------------------------------------------
-        // Process notification
-        // -------------------------------------------------
 
         try {
 
@@ -1123,6 +1071,7 @@ exports.notifyBid = onCall(
 
                 data.oldBidAmount ??
                 null
+
             );
 
 
@@ -1142,6 +1091,7 @@ exports.notifyBid = onCall(
 
                 message:
                     "Bid notification processed successfully.",
+
             };
 
         } catch (error) {
@@ -1164,9 +1114,201 @@ exports.notifyBid = onCall(
                 message:
                     error?.message ||
                     "Bid notification failed.",
+
             };
+
         }
+
     }
+
+);
+
+
+// =========================================================
+// ADMIN HELPERS
+// =========================================================
+
+const ADMIN_CORS = [
+
+    "https://sreerajmadatheri.github.io",
+
+    "http://localhost:5173",
+
+    "http://localhost:5174",
+
+];
+
+
+async function verifyAdmin(request) {
+
+    if (!request.auth) {
+
+        return {
+
+            success: false,
+
+            message:
+                "Authentication is required.",
+
+        };
+
+    }
+
+
+    const callerUid =
+        request.auth.uid;
+
+
+    const callerAdminSnap =
+        await db
+            .collection("admins")
+            .doc(callerUid)
+            .get();
+
+
+    const callerIsAdmin =
+        callerAdminSnap.exists &&
+        callerAdminSnap.data()?.role ===
+        "admin";
+
+
+    if (!callerIsAdmin) {
+
+        return {
+
+            success: false,
+
+            message:
+                "Administrator permission is required.",
+
+        };
+
+    }
+
+
+    return {
+
+        success: true,
+
+        uid:
+        callerUid,
+
+    };
+
+}
+
+
+// =========================================================
+// CALLABLE: GET ADMIN USER IDS
+// =========================================================
+//
+// The browser cannot query the complete /admins collection
+// because Firestore rules intentionally allow a user to read
+// only their own admin document.
+//
+// This callable lets an authenticated administrator retrieve
+// the authoritative list of administrator UIDs.
+//
+
+exports.getAdminUsers = onCall(
+
+    {
+        region: "asia-south1",
+
+        cors:
+        ADMIN_CORS,
+
+    },
+
+
+    async (request) => {
+
+        console.log(
+            "getAdminUsers callable function invoked."
+        );
+
+
+        const authorization =
+            await verifyAdmin(
+                request
+            );
+
+
+        if (!authorization.success) {
+
+            return authorization;
+
+        }
+
+
+        try {
+
+            const snapshot =
+                await db
+                    .collection("admins")
+                    .get();
+
+
+            const adminUserIds = [];
+
+
+            snapshot.forEach(
+                (adminDoc) => {
+
+                    const data =
+                        adminDoc.data();
+
+
+                    if (
+                        data?.role ===
+                        "admin"
+                    ) {
+
+                        adminUserIds.push(
+                            adminDoc.id
+                        );
+
+                    }
+
+                }
+            );
+
+
+            console.log(
+                `Found ${adminUserIds.length} administrator(s).`
+            );
+
+
+            return {
+
+                success: true,
+
+                adminUserIds,
+
+            };
+
+        } catch (error) {
+
+            console.error(
+                "getAdminUsers failed:",
+                error
+            );
+
+
+            return {
+
+                success: false,
+
+                message:
+                    error?.message ||
+                    "Unable to retrieve administrators.",
+
+            };
+
+        }
+
+    }
+
 );
 
 
@@ -1174,23 +1316,15 @@ exports.notifyBid = onCall(
 // CALLABLE: SET USER ADMIN STATUS
 // =========================================================
 //
-// Allows an existing administrator to:
+// makeAdmin = true
+//     User becomes Admin.
 //
-//   - Promote a normal user to Admin
-//   - Remove Admin access from a user
+// makeAdmin = false
+//     Admin rights are removed.
 //
-// SECURITY:
-//
-// The browser is NOT allowed to write directly to:
-//
-//     admins/{userId}
-//
-// Firestore rules keep writes blocked:
-//
-//     allow write: if false;
-//
-// This function uses Firebase Admin SDK and therefore
-// performs the trusted server-side operation.
+// IMPORTANT:
+// Removing Admin rights does NOT deactivate the user.
+// The user remains active as a normal user.
 //
 // =========================================================
 
@@ -1198,6 +1332,10 @@ exports.setUserAdmin = onCall(
 
     {
         region: "asia-south1",
+
+        cors:
+        ADMIN_CORS,
+
     },
 
 
@@ -1213,78 +1351,27 @@ exports.setUserAdmin = onCall(
         );
 
 
-        // -------------------------------------------------
-        // Verify caller authentication
-        // -------------------------------------------------
-
-        if (!request.auth) {
-
-            console.warn(
-                "Unauthenticated setUserAdmin request rejected."
+        const authorization =
+            await verifyAdmin(
+                request
             );
 
 
-            return {
+        if (!authorization.success) {
 
-                success: false,
+            console.warn(
+                "Unauthorized setUserAdmin request."
+            );
 
-                message:
-                    "Authentication is required.",
-            };
+
+            return authorization;
+
         }
 
 
         const callerUid =
-            request.auth.uid;
+            authorization.uid;
 
-
-        console.log(
-            "Admin action requested by:",
-            callerUid
-        );
-
-
-        // -------------------------------------------------
-        // Verify caller is an administrator
-        // -------------------------------------------------
-
-        const callerAdminRef =
-            db
-                .collection("admins")
-                .doc(callerUid);
-
-
-        const callerAdminSnap =
-            await callerAdminRef.get();
-
-
-        const callerIsAdmin =
-            callerAdminSnap.exists &&
-            callerAdminSnap.data()?.role ===
-            "admin";
-
-
-        if (!callerIsAdmin) {
-
-            console.warn(
-                "Unauthorized admin-management attempt:",
-                callerUid
-            );
-
-
-            return {
-
-                success: false,
-
-                message:
-                    "Administrator permission is required.",
-            };
-        }
-
-
-        // -------------------------------------------------
-        // Read request data
-        // -------------------------------------------------
 
         const data =
             request.data || {};
@@ -1299,7 +1386,7 @@ exports.setUserAdmin = onCall(
 
 
         // -------------------------------------------------
-        // Validate target user ID
+        // Validate target UID
         // -------------------------------------------------
 
         if (
@@ -1314,7 +1401,9 @@ exports.setUserAdmin = onCall(
 
                 message:
                     "A valid targetUserId is required.",
+
             };
+
         }
 
 
@@ -1333,12 +1422,14 @@ exports.setUserAdmin = onCall(
 
                 message:
                     "makeAdmin must be true or false.",
+
             };
+
         }
 
 
         // -------------------------------------------------
-        // Prevent self-demotion
+        // Prevent self modification
         // -------------------------------------------------
 
         if (
@@ -1358,12 +1449,14 @@ exports.setUserAdmin = onCall(
 
                 message:
                     "You cannot change your own administrator status.",
+
             };
+
         }
 
 
         // -------------------------------------------------
-        // Verify target user exists
+        // Get target user
         // -------------------------------------------------
 
         const targetUserRef =
@@ -1384,7 +1477,9 @@ exports.setUserAdmin = onCall(
 
                 message:
                     "Target user profile was not found.",
+
             };
+
         }
 
 
@@ -1395,6 +1490,7 @@ exports.setUserAdmin = onCall(
         console.log(
             "Target user:",
             {
+
                 uid:
                 targetUserId,
 
@@ -1410,12 +1506,23 @@ exports.setUserAdmin = onCall(
                     makeAdmin
                         ? "admin"
                         : "user",
+
             }
         );
 
 
+        const adminRef =
+            db
+                .collection("admins")
+                .doc(targetUserId);
+
+
+        const batch =
+            db.batch();
+
+
         // =================================================
-        // PROMOTE USER TO ADMIN
+        // MAKE ADMIN
         // =================================================
 
         if (makeAdmin) {
@@ -1426,42 +1533,60 @@ exports.setUserAdmin = onCall(
             );
 
 
-            const batch =
-                db.batch();
-
-
-            const adminRef =
-                db
-                    .collection("admins")
-                    .doc(targetUserId);
-
-
-            // Create/update admin document.
-
             batch.set(
+
                 adminRef,
+
                 {
-                    role: "admin",
+
+                    role:
+                        "admin",
+
                 },
+
                 {
-                    merge: true,
+
+                    merge:
+                        true,
+
                 }
+
             );
 
 
-            // Keep users/{uid}.role synchronized.
-
             batch.update(
+
                 targetUserRef,
+
                 {
-                    role: "admin",
+
+                    role:
+                        "admin",
+
+                    // Making somebody Admin must NOT
+                    // accidentally deactivate them.
+
+                    isActive:
+                        targetUser.isActive === false
+                            ? false
+                            : true,
+
                     updatedAt:
                         new Date(),
+
                 }
+
             );
 
 
             await batch.commit();
+
+
+            // If the user was previously disabled,
+            // do not automatically enable them here.
+            //
+            // Admin promotion and account activation
+            // remain separate operations.
 
 
             console.log(
@@ -1470,14 +1595,10 @@ exports.setUserAdmin = onCall(
             );
 
 
-            console.log(
-                "=========================================="
-            );
-
-
             return {
 
-                success: true,
+                success:
+                    true,
 
                 message:
                     "User promoted to Admin successfully.",
@@ -1487,12 +1608,14 @@ exports.setUserAdmin = onCall(
 
                 role:
                     "admin",
+
             };
+
         }
 
 
         // =================================================
-        // REMOVE ADMIN ACCESS
+        // REMOVE ADMIN
         // =================================================
 
         console.log(
@@ -1501,32 +1624,38 @@ exports.setUserAdmin = onCall(
         );
 
 
-        const batch =
-            db.batch();
-
-
-        const adminRef =
-            db
-                .collection("admins")
-                .doc(targetUserId);
-
-
-        // Delete the admin record.
+        // Remove /admins/{uid}.
 
         batch.delete(
             adminRef
         );
 
 
-        // Synchronize users/{uid}.role.
+        // IMPORTANT:
+        //
+        // Removing admin does NOT deactivate.
+        //
+        // Keep the user's existing active status.
 
         batch.update(
+
             targetUserRef,
+
             {
-                role: "user",
+
+                role:
+                    "user",
+
+                isActive:
+                    targetUser.isActive === false
+                        ? false
+                        : true,
+
                 updatedAt:
                     new Date(),
+
             }
+
         );
 
 
@@ -1539,23 +1668,443 @@ exports.setUserAdmin = onCall(
         );
 
 
-        console.log(
-            "=========================================="
-        );
-
-
         return {
 
-            success: true,
+            success:
+                true,
 
             message:
-                "Admin access removed successfully.",
+                "Admin access removed successfully. User remains active.",
 
             userId:
             targetUserId,
 
             role:
                 "user",
+
+            isActive:
+                targetUser.isActive === false
+                    ? false
+                    : true,
+
         };
+
     }
+
+);
+
+
+// =========================================================
+// CALLABLE: SET USER ACCOUNT STATUS
+// =========================================================
+//
+// isActive = false
+//     User becomes inactive.
+//     Firebase Authentication account is disabled.
+//     Admin access is also removed.
+//
+// isActive = true
+//     User becomes active.
+//     Firebase Authentication account is enabled.
+//     User remains a normal user.
+//
+// IMPORTANT:
+// Activation does NOT grant Admin rights.
+//
+// =========================================================
+
+exports.setUserStatus = onCall(
+
+    {
+        region: "asia-south1",
+
+        cors:
+        ADMIN_CORS,
+
+    },
+
+
+    async (request) => {
+
+        console.log(
+            "=========================================="
+        );
+
+
+        console.log(
+            "setUserStatus callable function invoked."
+        );
+
+
+        const authorization =
+            await verifyAdmin(
+                request
+            );
+
+
+        if (!authorization.success) {
+
+            return authorization;
+
+        }
+
+
+        const callerUid =
+            authorization.uid;
+
+
+        const data =
+            request.data || {};
+
+
+        const targetUserId =
+            data.targetUserId;
+
+
+        const isActive =
+            data.isActive;
+
+
+        // -------------------------------------------------
+        // Validate target UID
+        // -------------------------------------------------
+
+        if (
+            !targetUserId ||
+            typeof targetUserId !==
+            "string"
+        ) {
+
+            return {
+
+                success: false,
+
+                message:
+                    "A valid targetUserId is required.",
+
+            };
+
+        }
+
+
+        // -------------------------------------------------
+        // Validate status
+        // -------------------------------------------------
+
+        if (
+            typeof isActive !==
+            "boolean"
+        ) {
+
+            return {
+
+                success: false,
+
+                message:
+                    "isActive must be true or false.",
+
+            };
+
+        }
+
+
+        // -------------------------------------------------
+        // Prevent self deactivation
+        // -------------------------------------------------
+
+        if (
+            targetUserId ===
+            callerUid
+        ) {
+
+            return {
+
+                success: false,
+
+                message:
+                    "You cannot change your own account status.",
+
+            };
+
+        }
+
+
+        // -------------------------------------------------
+        // Get target user
+        // -------------------------------------------------
+
+        const targetUserRef =
+            db
+                .collection("users")
+                .doc(targetUserId);
+
+
+        const targetUserSnap =
+            await targetUserRef.get();
+
+
+        if (!targetUserSnap.exists) {
+
+            return {
+
+                success: false,
+
+                message:
+                    "Target user profile was not found.",
+
+            };
+
+        }
+
+
+        // -------------------------------------------------
+        // Get Admin record
+        // -------------------------------------------------
+
+        const targetAdminRef =
+            db
+                .collection("admins")
+                .doc(targetUserId);
+
+
+        const batch =
+            db.batch();
+
+
+        // =================================================
+        // DEACTIVATE
+        // =================================================
+
+        if (!isActive) {
+
+            console.log(
+                "Deactivating user:",
+                targetUserId
+            );
+
+
+            // -------------------------------------------------
+            // IMPORTANT:
+            //
+            // An inactive account must not remain an Admin.
+            // -------------------------------------------------
+
+            batch.delete(
+                targetAdminRef
+            );
+
+
+            batch.update(
+
+                targetUserRef,
+
+                {
+
+                    role:
+                        "user",
+
+                    isActive:
+                        false,
+
+                    updatedAt:
+                        new Date(),
+
+                }
+
+            );
+
+
+            await batch.commit();
+
+
+            // -------------------------------------------------
+            // Disable Firebase Authentication account
+            // -------------------------------------------------
+
+            try {
+
+                await adminAuth.updateUser(
+
+                    targetUserId,
+
+                    {
+
+                        disabled:
+                            true,
+
+                    }
+
+                );
+
+            } catch (authError) {
+
+                console.error(
+                    "Failed to disable Firebase Authentication user:",
+                    authError
+                );
+
+
+                // Roll back Firestore state if Auth
+                // update failed.
+
+                await db
+                    .collection("users")
+                    .doc(targetUserId)
+                    .update({
+
+                        isActive:
+                            true,
+
+                        updatedAt:
+                            new Date(),
+
+                    });
+
+
+                throw authError;
+
+            }
+
+
+            console.log(
+                "User deactivated successfully:",
+                targetUserId
+            );
+
+
+            return {
+
+                success:
+                    true,
+
+                message:
+                    "User deactivated successfully.",
+
+                userId:
+                targetUserId,
+
+                isActive:
+                    false,
+
+                role:
+                    "user",
+
+            };
+
+        }
+
+
+        // =================================================
+        // ACTIVATE
+        // =================================================
+
+        console.log(
+            "Activating user:",
+            targetUserId
+        );
+
+
+        // -------------------------------------------------
+        // Activation does NOT create an Admin record.
+        // -------------------------------------------------
+
+        batch.update(
+
+            targetUserRef,
+
+            {
+
+                isActive:
+                    true,
+
+                role:
+                    "user",
+
+                updatedAt:
+                    new Date(),
+
+            }
+
+        );
+
+
+        await batch.commit();
+
+
+        // -------------------------------------------------
+        // Enable Firebase Authentication account
+        // -------------------------------------------------
+
+        try {
+
+            await adminAuth.updateUser(
+
+                targetUserId,
+
+                {
+
+                    disabled:
+                        false,
+
+                }
+
+            );
+
+        } catch (authError) {
+
+            console.error(
+                "Failed to enable Firebase Authentication user:",
+                authError
+            );
+
+
+            // Roll back Firestore state if Auth
+            // update failed.
+
+            await db
+                .collection("users")
+                .doc(targetUserId)
+                .update({
+
+                    isActive:
+                        false,
+
+                    updatedAt:
+                        new Date(),
+
+                });
+
+
+            throw authError;
+
+        }
+
+
+        console.log(
+            "User activated successfully:",
+            targetUserId
+        );
+
+
+        return {
+
+            success:
+                true,
+
+            message:
+                "User activated successfully.",
+
+            userId:
+            targetUserId,
+
+            isActive:
+                true,
+
+            role:
+                "user",
+
+        };
+
+    }
+
 );

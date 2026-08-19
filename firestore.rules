@@ -209,8 +209,14 @@ service cloud.firestore {
       // NORMAL USER - DELETE
       // ------------------------------------------
 
-      // Normal users cannot delete listings.
-      allow delete: if isAdmin();
+      // Admin can delete any listing.
+      //
+      // Normal users can delete only their own listing.
+      allow delete: if isAdmin()
+        || (
+          isAuthenticated()
+          && resource.data.userId == request.auth.uid
+        );
     }
 
 

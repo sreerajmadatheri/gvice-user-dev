@@ -1,4 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import {
+    useEffect,
+    useMemo,
+    useState,
+} from "react";
+
 
 import {
     Search,
@@ -6,29 +11,38 @@ import {
     Save,
     X,
     ShieldCheck,
-    ShieldOff,
     User,
     RefreshCw,
     CheckCircle,
     AlertCircle,
 } from "lucide-react";
 
+
 import {
     collection,
     getDocs,
 } from "firebase/firestore";
 
+
 import {
     httpsCallable,
 } from "firebase/functions";
 
-import { db, functions } from "../../lib/firebase";
+
+import {
+    db,
+    functions,
+} from "../../lib/firebase";
+
 
 import {
     updateUserProfile,
 } from "../../services/userService";
 
-import { useAuth } from "../../context/AuthContext";
+
+import {
+    useAuth,
+} from "../../context/AuthContext";
 
 
 const ManageUsers = () => {
@@ -41,11 +55,18 @@ const ManageUsers = () => {
     const [users, setUsers] =
         useState([]);
 
+    // Authoritative administrator UID list.
+    const [adminUserIds, setAdminUserIds] =
+        useState(new Set());
+
+
     const [loading, setLoading] =
         useState(true);
 
+
     const [refreshing, setRefreshing] =
         useState(false);
+
 
     const [searchTerm, setSearchTerm] =
         useState("");
@@ -54,12 +75,14 @@ const ManageUsers = () => {
     const [editingUser, setEditingUser] =
         useState(null);
 
+
     const [formData, setFormData] =
         useState({});
 
 
     const [saving, setSaving] =
         useState(false);
+
 
     const [changingRole, setChangingRole] =
         useState(false);
@@ -81,9 +104,13 @@ const ManageUsers = () => {
     ) => {
 
         if (showRefreshState) {
+
             setRefreshing(true);
+
         } else {
+
             setLoading(true);
+
         }
 
 
@@ -91,18 +118,51 @@ const ManageUsers = () => {
 
             const snapshot =
                 await getDocs(
-                    collection(db, "users")
+                    collection(
+                        db,
+                        "users"
+                    )
                 );
 
+            // /admins is not directly readable as a collection from the
+            // browser. Get the authoritative admin UIDs through a callable.
+            const getAdminUsers =
+                httpsCallable(
+                    functions,
+                    "getAdminUsers"
+                );
+
+            const adminResult =
+                await getAdminUsers({});
+
+            if (!adminResult?.data?.success) {
+                throw new Error(
+                    adminResult?.data?.message ||
+                    "Unable to load administrator status."
+                );
+            }
+
+            const adminIds =
+                new Set(
+                    adminResult.data.adminUserIds || []
+                );
+
+            setAdminUserIds(adminIds);
 
             const loadedUsers =
                 snapshot.docs.map(
-                    (userDoc) => ({
-                        id: userDoc.id,
-                        ...userDoc.data(),
-                    })
-                );
+                    (userDoc) => {
+                        const userData = userDoc.data();
 
+                        return {
+                            id: userDoc.id,
+                            ...userData,
+                            role: adminIds.has(userDoc.id)
+                                ? "admin"
+                                : "user",
+                        };
+                    }
+                );
 
             loadedUsers.sort(
                 (a, b) => {
@@ -114,6 +174,7 @@ const ManageUsers = () => {
                             ""
                         ).toLowerCase();
 
+
                     const nameB =
                         (
                             b.displayName ||
@@ -121,12 +182,18 @@ const ManageUsers = () => {
                             ""
                         ).toLowerCase();
 
-                    return nameA.localeCompare(nameB);
+
+                    return nameA.localeCompare(
+                        nameB
+                    );
+
                 }
             );
 
 
-            setUsers(loadedUsers);
+            setUsers(
+                loadedUsers
+            );
 
         } catch (error) {
 
@@ -135,22 +202,32 @@ const ManageUsers = () => {
                 error
             );
 
+
             setStatus({
-                type: "error",
+
+                type:
+                    "error",
+
                 message:
                     "Unable to load users. Please try again.",
+
             });
 
         } finally {
 
             setLoading(false);
+
             setRefreshing(false);
+
         }
+
     };
 
 
     useEffect(() => {
+
         loadUsers();
+
     }, []);
 
 
@@ -166,8 +243,11 @@ const ManageUsers = () => {
                     .trim()
                     .toLowerCase();
 
+
             if (!search) {
+
                 return users;
+
             }
 
 
@@ -175,25 +255,41 @@ const ManageUsers = () => {
                 (item) => {
 
                     const values = [
+
                         item.displayName,
+
                         item.firstName,
+
                         item.lastName,
+
                         item.email,
+
                         item.company,
+
                         item.designation,
+
                         item.phone,
+
                         item.country,
+
                         item.city,
+
                         item.role,
+
                     ];
 
 
                     return values.some(
                         (value) =>
-                            String(value || "")
+                            String(
+                                value || ""
+                            )
                                 .toLowerCase()
-                                .includes(search)
+                                .includes(
+                                    search
+                                )
                     );
+
                 }
             );
 
@@ -207,7 +303,9 @@ const ManageUsers = () => {
     // EDIT USER
     // =====================================================
 
-    const handleEditUser = (item) => {
+    const handleEditUser = (
+        item
+    ) => {
 
         setStatus({
             type: "",
@@ -215,33 +313,47 @@ const ManageUsers = () => {
         });
 
 
-        setEditingUser(item);
+        setEditingUser(
+            item
+        );
+
 
         setFormData({
+
             displayName:
-                item.displayName || "",
+                item.displayName ||
+                "",
 
             firstName:
-                item.firstName || "",
+                item.firstName ||
+                "",
 
             lastName:
-                item.lastName || "",
+                item.lastName ||
+                "",
 
             company:
-                item.company || "",
+                item.company ||
+                "",
 
             designation:
-                item.designation || "",
+                item.designation ||
+                "",
 
             phone:
-                item.phone || "",
+                item.phone ||
+                "",
 
             country:
-                item.country || "",
+                item.country ||
+                "",
 
             city:
-                item.city || "",
+                item.city ||
+                "",
+
         });
+
     };
 
 
@@ -251,12 +363,23 @@ const ManageUsers = () => {
 
     const handleCloseEdit = () => {
 
-        if (saving || changingRole) {
+        if (
+            saving ||
+            changingRole
+        ) {
+
             return;
+
         }
 
-        setEditingUser(null);
+
+        setEditingUser(
+            null
+        );
+
+
         setFormData({});
+
     };
 
 
@@ -264,7 +387,9 @@ const ManageUsers = () => {
     // FORM CHANGE
     // =====================================================
 
-    const handleChange = (event) => {
+    const handleChange = (
+        event
+    ) => {
 
         const {
             name,
@@ -274,10 +399,15 @@ const ManageUsers = () => {
 
         setFormData(
             (previous) => ({
+
                 ...previous,
-                [name]: value,
+
+                [name]:
+                value,
+
             })
         );
+
     };
 
 
@@ -287,16 +417,26 @@ const ManageUsers = () => {
 
     const handleSaveUser = async () => {
 
-        if (!editingUser?.id) {
+        if (
+            !editingUser?.id
+        ) {
+
             return;
+
         }
 
 
         setSaving(true);
 
+
         setStatus({
-            type: "",
-            message: "",
+
+            type:
+                "",
+
+            message:
+                "",
+
         });
 
 
@@ -327,12 +467,16 @@ const ManageUsers = () => {
 
                 city:
                     formData.city.trim(),
+
             };
 
 
             await updateUserProfile(
+
                 editingUser.id,
+
                 updates
+
             );
 
 
@@ -340,31 +484,33 @@ const ManageUsers = () => {
                 (previous) =>
                     previous.map(
                         (item) =>
-                            item.id === editingUser.id
+
+                            item.id ===
+                            editingUser.id
+
                                 ? {
+
                                     ...item,
+
                                     ...updates,
+
                                 }
+
                                 : item
                     )
             );
 
-
-            setEditingUser(
-                (previous) =>
-                    previous
-                        ? {
-                            ...previous,
-                            ...updates,
-                        }
-                        : previous
-            );
-
+            setEditingUser(null);
+            setFormData({});
 
             setStatus({
-                type: "success",
+
+                type:
+                    "success",
+
                 message:
                     "User profile updated successfully.",
+
             });
 
         } catch (error) {
@@ -374,183 +520,342 @@ const ManageUsers = () => {
                 error
             );
 
+
             setStatus({
-                type: "error",
+
+                type:
+                    "error",
+
                 message:
                     error?.message ||
                     "Unable to update user profile.",
+
             });
 
         } finally {
 
             setSaving(false);
+
+        }
+
+    };
+
+
+    // =====================================================
+    // MAKE USER ADMIN
+    // =====================================================
+
+    const handleMakeAdmin = async (
+        targetUser
+    ) => {
+
+        if (!targetUser?.id) {
+
+            return;
+
+        }
+
+
+        // -----------------------------------------------
+        // Never allow the current admin to modify
+        // their own administrator status.
+        // -----------------------------------------------
+
+        if (
+            targetUser.id ===
+            currentUser?.uid
+        ) {
+
+            setStatus({
+
+                type:
+                    "error",
+
+                message:
+                    "You cannot change your own admin status.",
+
+            });
+
+            return;
+
+        }
+
+
+        // -----------------------------------------------
+        // Existing admins should never reach this action.
+        // Keep this guard even if the UI is changed later.
+        // -----------------------------------------------
+
+        if (
+            adminUserIds.has(targetUser.id)
+        ) {
+
+            setStatus({
+
+                type:
+                    "error",
+
+                message:
+                    "This user is already an administrator.",
+
+            });
+
+            return;
+
+        }
+
+
+        const confirmation =
+            `Make ${
+                targetUser.displayName ||
+                targetUser.email ||
+                "this user"
+            } an administrator?`;
+
+
+        if (
+            !window.confirm(
+                confirmation
+            )
+        ) {
+
+            return;
+
+        }
+
+
+        setChangingRole(
+            true
+        );
+
+
+        setStatus({
+
+            type:
+                "",
+
+            message:
+                "",
+
+        });
+
+
+        try {
+
+            const setUserAdmin =
+                httpsCallable(
+                    functions,
+                    "setUserAdmin"
+                );
+
+
+            const result =
+                await setUserAdmin({
+
+                    targetUserId:
+                    targetUser.id,
+
+                    makeAdmin:
+                        true,
+
+                });
+
+
+            const response =
+                result?.data;
+
+
+            if (
+                !response?.success
+            ) {
+
+                throw new Error(
+
+                    response?.message ||
+                    "Unable to make user an administrator."
+
+                );
+
+            }
+
+            setStatus({
+
+                type:
+                    "success",
+
+                message:
+                    "User has been promoted to Admin.",
+
+            });
+
+            await loadUsers(true);
+            setEditingUser(null);
+            setFormData({});
+
+        } catch (error) {
+
+            console.error(
+                "Error changing admin status:",
+                error
+            );
+
+
+            setStatus({
+
+                type:
+                    "error",
+
+                message:
+                    error?.message ||
+                    "Unable to make user an administrator.",
+
+            });
+
+        } finally {
+
+            setChangingRole(
+                false
+            );
+
+        }
+
+    };
+
+
+    // =====================================================
+    // REMOVE ADMIN ACCESS
+    // =====================================================
+
+    const handleRemoveAdmin = async (targetUser) => {
+
+        if (!targetUser?.id) return;
+
+        if (targetUser.id === currentUser?.uid) {
+            setStatus({
+                type: "error",
+                message: "You cannot remove your own admin access.",
+            });
+            return;
+        }
+
+        if (!adminUserIds.has(targetUser.id)) {
+            setStatus({
+                type: "error",
+                message: "This user is not an administrator.",
+            });
+            return;
+        }
+
+        const confirmation = `Remove admin access from ${
+            targetUser.displayName || targetUser.email || "this user"
+        }? They will remain an active normal user.`;
+
+        if (!window.confirm(confirmation)) return;
+
+        setChangingRole(true);
+        setStatus({ type: "", message: "" });
+
+        try {
+            const setUserAdmin = httpsCallable(functions, "setUserAdmin");
+
+            const result = await setUserAdmin({
+                targetUserId: targetUser.id,
+                makeAdmin: false,
+            });
+
+            if (!result?.data?.success) {
+                throw new Error(
+                    result?.data?.message ||
+                    "Unable to remove administrator access."
+                );
+            }
+
+            setStatus({
+                type: "success",
+                message: "Admin access removed. The user remains active.",
+            });
+
+            await loadUsers(true);
+            setEditingUser(null);
+            setFormData({});
+
+        } catch (error) {
+            console.error("Error removing admin status:", error);
+            setStatus({
+                type: "error",
+                message:
+                    error?.message ||
+                    "Unable to remove administrator access.",
+            });
+        } finally {
+            setChangingRole(false);
         }
     };
 
 
     // =====================================================
-    // CHANGE ADMIN STATUS
+    // ACTIVATE / DEACTIVATE USER
     // =====================================================
 
-    const handleChangeAdminStatus =
-        async (targetUser) => {
+    const handleSetUserActive = async (targetUser, active) => {
 
-            if (!targetUser?.id) {
-                return;
-            }
+        if (!targetUser?.id) return;
 
-
-            // Do not allow an admin to remove
-            // their own admin access.
-            if (
-                targetUser.id ===
-                currentUser?.uid
-            ) {
-
-                setStatus({
-                    type: "error",
-                    message:
-                        "You cannot change your own admin status.",
-                });
-
-                return;
-            }
-
-
-            const currentlyAdmin =
-                targetUser.role === "admin";
-
-
-            const action =
-                currentlyAdmin
-                    ? "remove"
-                    : "promote";
-
-
-            const confirmation =
-                currentlyAdmin
-                    ? `Remove admin access from ${
-                        targetUser.displayName ||
-                        targetUser.email ||
-                        "this user"
-                    }?`
-                    : `Make ${
-                        targetUser.displayName ||
-                        targetUser.email ||
-                        "this user"
-                    } an administrator?`;
-
-
-            if (!window.confirm(confirmation)) {
-                return;
-            }
-
-
-            setChangingRole(true);
-
+        if (targetUser.id === currentUser?.uid) {
             setStatus({
-                type: "",
-                message: "",
+                type: "error",
+                message: "You cannot change your own account status.",
+            });
+            return;
+        }
+
+        const confirmation = `${active ? "Activate" : "Deactivate"} ${
+            targetUser.displayName || targetUser.email || "this user"
+        }?`;
+
+        if (!window.confirm(confirmation)) return;
+
+        setChangingRole(true);
+        setStatus({ type: "", message: "" });
+
+        try {
+            const setUserStatus = httpsCallable(functions, "setUserStatus");
+
+            const result = await setUserStatus({
+                targetUserId: targetUser.id,
+                isActive: active,
             });
 
-
-            try {
-
-                const setUserAdmin =
-                    httpsCallable(
-                        functions,
-                        "setUserAdmin"
-                    );
-
-
-                const result =
-                    await setUserAdmin({
-                        targetUserId:
-                        targetUser.id,
-
-                        makeAdmin:
-                            action === "promote",
-                    });
-
-
-                const response =
-                    result?.data;
-
-
-                if (!response?.success) {
-
-                    throw new Error(
-                        response?.message ||
-                        "Unable to change admin status."
-                    );
-                }
-
-
-                const newRole =
-                    action === "promote"
-                        ? "admin"
-                        : "user";
-
-
-                setUsers(
-                    (previous) =>
-                        previous.map(
-                            (item) =>
-                                item.id === targetUser.id
-                                    ? {
-                                        ...item,
-                                        role: newRole,
-                                    }
-                                    : item
-                        )
+            if (!result?.data?.success) {
+                throw new Error(
+                    result?.data?.message ||
+                    `Unable to ${active ? "activate" : "deactivate"} user.`
                 );
-
-
-                if (
-                    editingUser?.id ===
-                    targetUser.id
-                ) {
-
-                    setEditingUser(
-                        (previous) =>
-                            previous
-                                ? {
-                                    ...previous,
-                                    role: newRole,
-                                }
-                                : previous
-                    );
-                }
-
-
-                setStatus({
-                    type: "success",
-                    message:
-                        action === "promote"
-                            ? "User has been promoted to Admin."
-                            : "Admin access has been removed from the user.",
-                });
-
-            } catch (error) {
-
-                console.error(
-                    "Error changing admin status:",
-                    error
-                );
-
-
-                setStatus({
-                    type: "error",
-                    message:
-                        error?.message ||
-                        "Unable to change admin status.",
-                });
-
-            } finally {
-
-                setChangingRole(false);
             }
-        };
+
+            setStatus({
+                type: "success",
+                message: active
+                    ? "User activated successfully."
+                    : "User deactivated successfully.",
+            });
+
+            await loadUsers(true);
+            setEditingUser(null);
+            setFormData({});
+
+        } catch (error) {
+            console.error("Error changing user status:", error);
+            setStatus({
+                type: "error",
+                message:
+                    error?.message ||
+                    `Unable to ${active ? "activate" : "deactivate"} user.`,
+            });
+        } finally {
+            setChangingRole(false);
+        }
+    };
 
 
     // =====================================================
@@ -558,29 +863,46 @@ const ManageUsers = () => {
     // =====================================================
 
     const renderField = (
+
         label,
+
         name,
+
         value,
+
         placeholder
+
     ) => {
 
         return (
-            <div className="admin-form-group">
 
-                <label htmlFor={name}>
+            <div
+                className="admin-form-group"
+            >
+
+                <label
+                    htmlFor={name}
+                >
                     {label}
                 </label>
+
 
                 <input
                     id={name}
                     name={name}
                     value={value}
-                    onChange={handleChange}
-                    placeholder={placeholder}
+                    onChange={
+                        handleChange
+                    }
+                    placeholder={
+                        placeholder
+                    }
                 />
 
             </div>
+
         );
+
     };
 
 
@@ -591,9 +913,12 @@ const ManageUsers = () => {
     if (loading) {
 
         return (
+
             <div>
 
-                <div className="admin-page-header">
+                <div
+                    className="admin-page-header"
+                >
 
                     <h2>
                         Manage Users
@@ -601,14 +926,17 @@ const ManageUsers = () => {
 
                 </div>
 
-                <div className="admin-card">
 
+                <div
+                    className="admin-card"
+                >
                     Loading users...
-
                 </div>
 
             </div>
+
         );
+
     }
 
 
@@ -617,11 +945,15 @@ const ManageUsers = () => {
     // =====================================================
 
     return (
+
         <div>
+
 
             {/* Header */}
 
-            <div className="admin-page-header">
+            <div
+                className="admin-page-header"
+            >
 
                 <div>
 
@@ -629,14 +961,18 @@ const ManageUsers = () => {
                         Manage Users
                     </h2>
 
+
                     <p
                         style={{
-                            marginTop: "0.4rem",
-                            color: "#6b7280",
+                            marginTop:
+                                "0.4rem",
+
+                            color:
+                                "#6b7280",
                         }}
                     >
-                        Manage registered users and
-                        administrator access.
+                        Manage registered users
+                        and administrator access.
                     </p>
 
                 </div>
@@ -648,7 +984,9 @@ const ManageUsers = () => {
                     onClick={() =>
                         loadUsers(true)
                     }
-                    disabled={refreshing}
+                    disabled={
+                        refreshing
+                    }
                 >
 
                     <RefreshCw
@@ -670,71 +1008,117 @@ const ManageUsers = () => {
 
                 <div
                     style={{
-                        marginBottom: "1rem",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "0.5rem",
+                        marginBottom:
+                            "1rem",
+
+                        display:
+                            "flex",
+
+                        alignItems:
+                            "center",
+
+                        gap:
+                            "0.5rem",
+
                         color:
-                            status.type === "success"
+                            status.type ===
+                            "success"
+
                                 ? "#15803d"
+
                                 : "#dc2626",
                     }}
                 >
 
-                    {status.type === "success" ? (
-                        <CheckCircle size={18} />
+                    {status.type ===
+                    "success" ? (
+
+                        <CheckCircle
+                            size={18}
+                        />
+
                     ) : (
-                        <AlertCircle size={18} />
+
+                        <AlertCircle
+                            size={18}
+                        />
+
                     )}
 
+
                     <span>
-            {status.message}
-          </span>
+                        {status.message}
+                    </span>
 
                 </div>
+
             )}
 
 
             {/* Search */}
 
-            <div className="admin-card">
+            <div
+                className="admin-card"
+            >
 
                 <div
                     style={{
-                        position: "relative",
-                        maxWidth: "600px",
+                        position:
+                            "relative",
+
+                        maxWidth:
+                            "600px",
                     }}
                 >
 
                     <Search
                         size={19}
                         style={{
-                            position: "absolute",
-                            left: "0.75rem",
-                            top: "50%",
+                            position:
+                                "absolute",
+
+                            left:
+                                "0.75rem",
+
+                            top:
+                                "50%",
+
                             transform:
                                 "translateY(-50%)",
-                            color: "#6b7280",
+
+                            color:
+                                "#6b7280",
                         }}
                     />
 
+
                     <input
                         type="text"
-                        value={searchTerm}
-                        onChange={(event) =>
-                            setSearchTerm(
-                                event.target.value
-                            )
+                        value={
+                            searchTerm
                         }
-                        placeholder="Search users by name, email, company, role..."
+                        onChange={
+                            (event) =>
+                                setSearchTerm(
+                                    event.target.value
+                                )
+                        }
+                        placeholder="Search users by name, email, company, role, status..."
                         style={{
-                            width: "100%",
+                            width:
+                                "100%",
+
                             padding:
                                 "0.7rem 0.75rem 0.7rem 2.5rem",
+
                             border:
                                 "1px solid #d1d5db",
-                            borderRadius: "0.375rem",
-                            boxSizing: "border-box",
+
+                            borderRadius:
+                                "0.375rem",
+
+                            boxSizing:
+                                "border-box",
                         }}
                     />
 
@@ -745,11 +1129,17 @@ const ManageUsers = () => {
 
             {/* Users */}
 
-            <div className="admin-card">
+            <div
+                className="admin-card"
+            >
 
-                <div className="admin-table-wrapper">
+                <div
+                    className="admin-table-wrapper"
+                >
 
-                    <table className="admin-table">
+                    <table
+                        className="admin-table"
+                    >
 
                         <thead>
 
@@ -782,16 +1172,22 @@ const ManageUsers = () => {
 
                         <tbody>
 
-                        {filteredUsers.length === 0 ? (
+                        {filteredUsers.length ===
+                        0 ? (
 
                             <tr>
 
                                 <td
                                     colSpan="5"
                                     style={{
-                                        textAlign: "center",
-                                        padding: "2rem",
-                                        color: "#6b7280",
+                                        textAlign:
+                                            "center",
+
+                                        padding:
+                                            "2rem",
+
+                                        color:
+                                            "#6b7280",
                                     }}
                                 >
                                     No users found.
@@ -808,14 +1204,17 @@ const ManageUsers = () => {
                                         item.id ===
                                         currentUser?.uid;
 
+
                                     const isAdmin =
-                                        item.role ===
-                                        "admin";
+                                        adminUserIds.has(item.id);
 
 
                                     return (
+
                                         <tr
-                                            key={item.id}
+                                            key={
+                                                item.id
+                                            }
                                         >
 
                                             <td>
@@ -824,16 +1223,22 @@ const ManageUsers = () => {
                                                     style={{
                                                         display:
                                                             "flex",
+
                                                         alignItems:
                                                             "center",
-                                                        gap: "0.75rem",
+
+                                                        gap:
+                                                            "0.75rem",
                                                     }}
                                                 >
 
                                                     <User
-                                                        size={18}
+                                                        size={
+                                                            18
+                                                        }
                                                         color="#6b7280"
                                                     />
+
 
                                                     <div>
 
@@ -843,21 +1248,31 @@ const ManageUsers = () => {
                                                                     600,
                                                             }}
                                                         >
-                                                            {item.displayName ||
+
+                                                            {
+                                                                item.displayName ||
                                                                 `${item.firstName || ""} ${item.lastName || ""}`.trim() ||
-                                                                "Unnamed User"}
+                                                                "Unnamed User"
+                                                            }
+
                                                         </div>
+
 
                                                         <div
                                                             style={{
                                                                 fontSize:
                                                                     "0.85rem",
+
                                                                 color:
                                                                     "#6b7280",
                                                             }}
                                                         >
-                                                            {item.email ||
-                                                                "-"}
+
+                                                            {
+                                                                item.email ||
+                                                                "-"
+                                                            }
+
                                                         </div>
 
                                                     </div>
@@ -868,8 +1283,12 @@ const ManageUsers = () => {
 
 
                                             <td>
-                                                {item.company ||
-                                                    "-"}
+
+                                                {
+                                                    item.company ||
+                                                    "-"
+                                                }
+
                                             </td>
 
 
@@ -881,21 +1300,30 @@ const ManageUsers = () => {
                                                         style={{
                                                             display:
                                                                 "inline-flex",
+
                                                             alignItems:
                                                                 "center",
+
                                                             gap:
                                                                 "0.35rem",
+
                                                             color:
                                                                 "#15803d",
+
                                                             fontWeight:
                                                                 600,
                                                         }}
                                                     >
-                              <ShieldCheck
-                                  size={17}
-                              />
-                              Admin
-                            </span>
+
+                                                            <ShieldCheck
+                                                                size={
+                                                                    17
+                                                                }
+                                                            />
+
+                                                            Admin
+
+                                                        </span>
 
                                                 ) : (
 
@@ -903,19 +1331,27 @@ const ManageUsers = () => {
                                                         style={{
                                                             display:
                                                                 "inline-flex",
+
                                                             alignItems:
                                                                 "center",
+
                                                             gap:
                                                                 "0.35rem",
+
                                                             color:
                                                                 "#6b7280",
                                                         }}
                                                     >
-                              <User
-                                  size={17}
-                              />
-                              User
-                            </span>
+
+                                                            <User
+                                                                size={
+                                                                    17
+                                                                }
+                                                            />
+
+                                                            User
+
+                                                        </span>
 
                                                 )}
 
@@ -924,16 +1360,20 @@ const ManageUsers = () => {
 
                                             <td>
 
-                                                {item.isApproved === false
-                                                    ? "Not Approved"
-                                                    : "Approved"}
+                                                {item.isActive === false
+                                                    ? "Inactive"
+                                                    : "Active"}
 
                                             </td>
 
 
                                             <td>
 
-                                                <div className="action-btns">
+                                                <div
+                                                    className="action-btns"
+                                                >
+
+                                                    {/* EDIT */}
 
                                                     <button
                                                         type="button"
@@ -944,54 +1384,75 @@ const ManageUsers = () => {
                                                             )
                                                         }
                                                     >
+
                                                         <Edit3
-                                                            size={16}
+                                                            size={
+                                                                16
+                                                            }
                                                         />
+
                                                         Edit
+
                                                     </button>
 
 
-                                                    {!isCurrentUser && (
+                                                    {/* USER ROLE ACTIONS */}
 
+                                                    {!isCurrentUser && !isAdmin && (
                                                         <button
                                                             type="button"
                                                             className="admin-btn"
                                                             onClick={() =>
-                                                                handleChangeAdminStatus(
-                                                                    item
+                                                                handleMakeAdmin(item)
+                                                            }
+                                                            disabled={changingRole}
+                                                        >
+                                                            <ShieldCheck size={16} />
+                                                            {changingRole ? "Updating..." : "Make Admin"}
+                                                        </button>
+                                                    )}
+
+                                                    {!isCurrentUser && isAdmin && (
+                                                        <button
+                                                            type="button"
+                                                            className="admin-btn admin-btn-secondary"
+                                                            onClick={() =>
+                                                                handleRemoveAdmin(item)
+                                                            }
+                                                            disabled={changingRole}
+                                                        >
+                                                            <ShieldCheck size={16} />
+                                                            Remove Admin
+                                                        </button>
+                                                    )}
+
+                                                    {!isCurrentUser && (
+                                                        <button
+                                                            type="button"
+                                                            className="admin-btn admin-btn-secondary"
+                                                            onClick={() =>
+                                                                handleSetUserActive(
+                                                                    item,
+                                                                    item.isActive === false
                                                                 )
                                                             }
-                                                            disabled={
-                                                                changingRole
-                                                            }
+                                                            disabled={changingRole}
                                                         >
-
-                                                            {isAdmin ? (
-                                                                <>
-                                                                    <ShieldOff
-                                                                        size={16}
-                                                                    />
-                                                                    Remove Admin
-                                                                </>
-                                                            ) : (
-                                                                <>
-                                                                    <ShieldCheck
-                                                                        size={16}
-                                                                    />
-                                                                    Make Admin
-                                                                </>
-                                                            )}
-
+                                                            {item.isActive === false
+                                                                ? "Activate"
+                                                                : "Deactivate"}
                                                         </button>
-
                                                     )}
+
 
                                                 </div>
 
                                             </td>
 
                                         </tr>
+
                                     );
+
                                 }
                             )
 
@@ -1006,21 +1467,35 @@ const ManageUsers = () => {
             </div>
 
 
-            {/* Edit Modal */}
+            {/* =================================================
+                EDIT MODAL
+            ================================================= */}
 
             {editingUser && (
 
-                <div className="admin-modal-overlay">
+                <div
+                    className="admin-modal-overlay"
+                >
 
-                    <div className="admin-modal">
+                    <div
+                        className="admin-modal"
+                    >
+
+                        {/* Modal Header */}
 
                         <div
                             style={{
-                                display: "flex",
+                                display:
+                                    "flex",
+
                                 justifyContent:
                                     "space-between",
-                                alignItems: "center",
-                                marginBottom: "1.5rem",
+
+                                alignItems:
+                                    "center",
+
+                                marginBottom:
+                                    "1.5rem",
                             }}
                         >
 
@@ -1035,15 +1510,22 @@ const ManageUsers = () => {
                                     Edit User
                                 </h3>
 
+
                                 <p
                                     style={{
-                                        margin: 0,
-                                        color: "#6b7280",
+                                        margin:
+                                            0,
+
+                                        color:
+                                            "#6b7280",
+
                                         fontSize:
                                             "0.9rem",
                                     }}
                                 >
-                                    {editingUser.email}
+                                    {
+                                        editingUser.email
+                                    }
                                 </p>
 
                             </div>
@@ -1060,18 +1542,30 @@ const ManageUsers = () => {
                                     changingRole
                                 }
                             >
-                                <X size={22} />
+
+                                <X
+                                    size={
+                                        22
+                                    }
+                                />
+
                             </button>
 
                         </div>
 
 
+                        {/* Form */}
+
                         <div
                             style={{
-                                display: "grid",
+                                display:
+                                    "grid",
+
                                 gridTemplateColumns:
                                     "repeat(auto-fit, minmax(220px, 1fr))",
-                                gap: "1rem",
+
+                                gap:
+                                    "1rem",
                             }}
                         >
 
@@ -1082,12 +1576,14 @@ const ManageUsers = () => {
                                 "Display name"
                             )}
 
+
                             {renderField(
                                 "First Name",
                                 "firstName",
                                 formData.firstName,
                                 "First name"
                             )}
+
 
                             {renderField(
                                 "Last Name",
@@ -1096,12 +1592,14 @@ const ManageUsers = () => {
                                 "Last name"
                             )}
 
+
                             {renderField(
                                 "Company",
                                 "company",
                                 formData.company,
                                 "Company"
                             )}
+
 
                             {renderField(
                                 "Designation",
@@ -1110,6 +1608,7 @@ const ManageUsers = () => {
                                 "Designation"
                             )}
 
+
                             {renderField(
                                 "Phone",
                                 "phone",
@@ -1117,12 +1616,14 @@ const ManageUsers = () => {
                                 "Phone"
                             )}
 
+
                             {renderField(
                                 "Country",
                                 "country",
                                 formData.country,
                                 "Country"
                             )}
+
 
                             {renderField(
                                 "City",
@@ -1138,143 +1639,186 @@ const ManageUsers = () => {
 
                         <div
                             style={{
-                                marginTop: "1rem",
-                                paddingTop: "1rem",
+                                marginTop:
+                                    "1rem",
+
+                                paddingTop:
+                                    "1rem",
+
                                 borderTop:
                                     "1px solid #e5e7eb",
                             }}
                         >
 
                             <p>
+
                                 <strong>
                                     Email:
                                 </strong>{" "}
-                                {editingUser.email ||
-                                    "-"}
+
+                                {
+                                    editingUser.email ||
+                                    "-"
+                                }
+
                             </p>
 
 
                             <p>
+
                                 <strong>
                                     Firebase UID:
                                 </strong>{" "}
-                                {editingUser.id}
+
+                                {
+                                    editingUser.id
+                                }
+
                             </p>
 
 
                             <p>
+
                                 <strong>
                                     Current Role:
                                 </strong>{" "}
-                                {editingUser.role ||
-                                    "user"}
+
+                                {
+                                    adminUserIds.has(editingUser.id)
+                                        ? "admin"
+                                        : "user"
+                                }
+
                             </p>
 
                         </div>
 
 
-                        {/* Admin actions */}
+                        {/* =================================================
+                            ADMIN ACCESS
+                        ================================================= */}
 
                         <div
                             style={{
                                 marginTop: "1rem",
-                                padding:
-                                    "1rem",
-                                background:
-                                    "#f9fafb",
-                                borderRadius:
-                                    "0.375rem",
+                                padding: "1rem",
+                                background: "#f9fafb",
+                                borderRadius: "0.375rem",
                             }}
                         >
-
                             <div
                                 style={{
-                                    display:
-                                        "flex",
-                                    justifyContent:
-                                        "space-between",
-                                    alignItems:
-                                        "center",
+                                    display: "flex",
+                                    justifyContent: "space-between",
+                                    alignItems: "center",
                                     gap: "1rem",
-                                    flexWrap:
-                                        "wrap",
+                                    flexWrap: "wrap",
                                 }}
                             >
-
                                 <div>
-
-                                    <strong>
-                                        Administrator Access
-                                    </strong>
-
+                                    <strong>Administrator Access</strong>
                                     <p
                                         style={{
-                                            margin:
-                                                "0.35rem 0 0",
-                                            color:
-                                                "#6b7280",
-                                            fontSize:
-                                                "0.85rem",
+                                            margin: "0.35rem 0 0",
+                                            color: "#6b7280",
+                                            fontSize: "0.85rem",
                                         }}
                                     >
-                                        {editingUser.role ===
-                                        "admin"
+                                        {adminUserIds.has(editingUser.id)
                                             ? "This user has administrator access."
                                             : "This user is a normal user."}
                                     </p>
-
                                 </div>
 
+                                {editingUser.id !== currentUser?.uid &&
+                                    adminUserIds.has(editingUser.id) && (
+                                        <button
+                                            type="button"
+                                            className="admin-btn admin-btn-secondary"
+                                            onClick={() => handleRemoveAdmin(editingUser)}
+                                            disabled={changingRole}
+                                        >
+                                            <ShieldCheck size={17} />
+                                            Remove Admin
+                                        </button>
+                                    )}
 
-                                {editingUser.id !==
-                                    currentUser?.uid && (
-
+                                {editingUser.id !== currentUser?.uid &&
+                                    !adminUserIds.has(editingUser.id) && (
                                         <button
                                             type="button"
                                             className="admin-btn"
-                                            onClick={() =>
-                                                handleChangeAdminStatus(
-                                                    editingUser
-                                                )
-                                            }
-                                            disabled={
-                                                changingRole
-                                            }
+                                            onClick={() => handleMakeAdmin(editingUser)}
+                                            disabled={changingRole}
                                         >
-
-                                            {editingUser.role ===
-                                            "admin" ? (
-                                                <>
-                                                    <ShieldOff
-                                                        size={17}
-                                                    />
-                                                    {changingRole
-                                                        ? "Removing..."
-                                                        : "Remove Admin"}
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <ShieldCheck
-                                                        size={17}
-                                                    />
-                                                    {changingRole
-                                                        ? "Promoting..."
-                                                        : "Make Admin"}
-                                                </>
-                                            )}
-
+                                            <ShieldCheck size={17} />
+                                            {changingRole ? "Updating..." : "Make Admin"}
                                         </button>
-
                                     )}
-
                             </div>
-
                         </div>
 
+                        {/* =================================================
+                            ACCOUNT STATUS
+                        ================================================= */}
+
+                        {editingUser.id !== currentUser?.uid && (
+                            <div
+                                style={{
+                                    marginTop: "1rem",
+                                    padding: "1rem",
+                                    background: "#f9fafb",
+                                    borderRadius: "0.375rem",
+                                }}
+                            >
+                                <div
+                                    style={{
+                                        display: "flex",
+                                        justifyContent: "space-between",
+                                        alignItems: "center",
+                                        gap: "1rem",
+                                        flexWrap: "wrap",
+                                    }}
+                                >
+                                    <div>
+                                        <strong>Account Status</strong>
+                                        <p
+                                            style={{
+                                                margin: "0.35rem 0 0",
+                                                color: "#6b7280",
+                                                fontSize: "0.85rem",
+                                            }}
+                                        >
+                                            {editingUser.isActive === false
+                                                ? "This account is inactive and cannot sign in."
+                                                : "This account is active and can sign in normally."}
+                                        </p>
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        className="admin-btn admin-btn-secondary"
+                                        onClick={() =>
+                                            handleSetUserActive(
+                                                editingUser,
+                                                editingUser.isActive === false
+                                            )
+                                        }
+                                        disabled={changingRole}
+                                    >
+                                        {editingUser.isActive === false
+                                            ? "Activate User"
+                                            : "Deactivate User"}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
 
                         {/* Actions */}
 
-                        <div className="admin-form-actions">
+                        <div
+                            className="admin-form-actions"
+                        >
 
                             <button
                                 type="button"
@@ -1288,7 +1832,11 @@ const ManageUsers = () => {
                                 }
                             >
 
-                                <X size={17} />
+                                <X
+                                    size={
+                                        17
+                                    }
+                                />
 
                                 Cancel
 
@@ -1307,7 +1855,11 @@ const ManageUsers = () => {
                                 }
                             >
 
-                                <Save size={17} />
+                                <Save
+                                    size={
+                                        17
+                                    }
+                                />
 
                                 {saving
                                     ? "Saving..."
@@ -1324,7 +1876,9 @@ const ManageUsers = () => {
             )}
 
         </div>
+
     );
+
 };
 
 
